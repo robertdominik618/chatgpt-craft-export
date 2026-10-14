@@ -151,11 +151,11 @@ The extension needs access only to ChatGPT web domains so it can inject the expo
 
 The project:
 
-- has no custom backend,
-- does not send conversation content to its own server,
+- has no project-operated cloud backend for conversion,
 - uses no analytics or telemetry SDK,
 - generates DOCX locally,
-- uses the browser's local print workflow for PDF.
+- can use an optional local Native Messaging bridge on macOS to save/open DOCX in WordCraft and PDF in PdfCraft,
+- falls back to normal browser download/print behavior when the bridge is unavailable.
 
 See:
 - [PRIVACY.md](../PRIVACY.md)
@@ -182,9 +182,26 @@ Safari:
 - confirm site access for `chatgpt.com`,
 - relaunch the host application from Xcode when testing a development build.
 
-### DOCX works but PDF does not
+### WordCraft/PdfCraft native opening on macOS
 
-PDF export uses the browser print system. After clicking the PdfCraft action, the browser print dialog should open. Choose **Save as PDF** as the destination.
+To enable direct desktop-app opening, run from the repository root:
+
+```bash
+./native/install_macos.sh
+```
+
+Then reload the extension and hard-refresh ChatGPT.
+
+Expected behavior with the bridge installed:
+
+- **WordCraft — Convert to DOC**: creates the DOCX, saves it under `~/Downloads`, opens it in WordCraft, and brings WordCraft to the foreground.
+- **PdfCraft — Convert to PDF**: creates the PDF, saves it under `~/Downloads`, and opens it in PdfCraft. It does not automatically open the Print dialog.
+
+If the bridge is unavailable, WordCraft falls back to a normal DOCX download and PdfCraft falls back to the browser print/PDF flow.
+
+### Stable unpacked-extension location
+
+For long-term development use, do not keep the unpacked extension in a temporary Downloads folder that may later be removed. A stable directory under your user profile or project workspace is preferable. If the unpacked folder moves or disappears, Chrome may keep old code in memory temporarily while web-accessible icons and other resources fail to load.
 
 ### Export filename
 
