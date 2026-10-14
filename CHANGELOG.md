@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.3 - 2026-10-14
+
+- Added automatic reinjection into already-open ChatGPT tabs after extension reload/start.
+- Added `scripting` permission so the background process can refresh the content script without requiring a hard page reload.
+- Added a shared active-instance marker so older content-script instances immediately become inert after reinjection.
+- Stale instances now disconnect their MutationObserver and stop handling pointer, click, keyboard and hover events.
+- Invalidated extension contexts are retired quietly instead of producing repeated console warnings or triggering PDF fallback.
+- This addresses the recurring `Extension context invalidated` condition caused by reloading/updating an unpacked extension while ChatGPT tabs remain open.
+
+## 0.3.2 - 2026-10-14
+
+- Added self-healing content-script reinjection support from the extension background process.
+- Added guarded cleanup for stale Craft UI when a new content-script instance is injected.
+
 ## 0.3.1 - 2026-10-14
 
 - Removed the final `insertAdjacentElement` code path that could still trigger `HierarchyRequestError`.
