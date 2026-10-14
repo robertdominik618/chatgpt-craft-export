@@ -7,6 +7,7 @@
   const INJECTED_ATTR = "data-craft-export-injected";
   const actionHandlers = new WeakMap();
   let hoverTooltip = null;
+  let domObserver = null;
 
   const browserApi = typeof browser !== "undefined" ? browser : chrome;
 
@@ -32,6 +33,30 @@
     wordTooltip: msg("wordTooltip", "Export this response as DOCX for WordCraft."),
     pdfTooltip: msg("pdfTooltip", "Open a clean print view for saving as PDF and opening in PdfCraft.")
   };
+
+  function clearCraftUi() {
+    document.querySelectorAll(`.${ACTION_CLASS}, .craft-export-hover-tooltip`).forEach((node) => node.remove());
+    document.querySelectorAll(`[${INJECTED_ATTR}]`).forEach((node) => node.removeAttribute(INJECTED_ATTR));
+    hoverTooltip = null;
+  }
+
+  function retireInvalidatedContext() {
+    try {
+      domObserver?.disconnect();
+    } catch {
+      // Best-effort cleanup only.
+    }
+    domObserver = null;
+    clearCraftUi();
+  }
+
+  function isInvalidatedContextError(error) {
+    return /extension context invalidated|context invalidated/i.test(String(error?.message || error || ""));
+  }
+
+  // A freshly reinjected content script replaces UI left by an older invalidated
+  // extension context. This makes extension Reload self-healing on open ChatGPT tabs.
+  clearCraftUi();
 
   function sanitizeFilename(input) {
     const cleaned = (input || "chatgpt-response")
@@ -473,6 +498,10 @@
         downloadBlob(blob, `${title}.docx`);
       })
       .catch((error) => {
+        if (isInvalidatedContextError(error)) {
+          retireInvalidatedContext();
+          return;
+        }
         console.warn("[Craft Export] WordCraft bridge failed; downloading DOCX", error);
         downloadBlob(blob, `${title}.docx`);
       });
@@ -576,6 +605,10 @@
         printFallback(title, html);
       })
       .catch((error) => {
+        if (isInvalidatedContextError(error)) {
+          retireInvalidatedContext();
+          return;
+        }
         console.warn("[Craft Export] PdfCraft bridge failed; using browser print", error);
         printFallback(title, html);
       });
@@ -889,8 +922,8 @@
     });
   }
 
-  const observer = new MutationObserver(scheduleScan);
-  observer.observe(document.documentElement, { childList: true, subtree: true });
+  domObserver = new MutationObserver(scheduleScan);
+  domObserver.observe(document.documentElement, { childList: true, subtree: true });
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", scan, { once: true });
