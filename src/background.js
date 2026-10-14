@@ -20,13 +20,13 @@ function sendToNative(payload) {
 const runtimeApi = typeof browser !== "undefined" ? browser.runtime : chrome.runtime;
 
 runtimeApi.onMessage.addListener((message, _sender, sendResponse) => {
-  if (!message || message.type !== "craft-export-pdf") return undefined;
+  if (!message || !["craft-export-pdf", "craft-export-word"].includes(message.type)) return undefined;
 
-  sendToNative({
-    action: "pdfcraft.open",
-    title: message.title,
-    html: message.html
-  })
+  const payload = message.type === "craft-export-word"
+    ? { action: "wordcraft.open", title: message.title, base64: message.base64 }
+    : { action: "pdfcraft.open", title: message.title, html: message.html };
+
+  sendToNative(payload)
     .then((result) => sendResponse({ ok: true, ...result }))
     .catch((error) => sendResponse({ ok: false, error: String(error?.message || error) }));
 
