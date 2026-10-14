@@ -11,6 +11,10 @@
 }
 
 .craft-export-button {
+  width: auto !important;
+  min-width: max-content !important;
+  max-width: none !important;
+  flex: 0 0 auto !important;
   appearance: none;
   border: 0;
   background: transparent;
