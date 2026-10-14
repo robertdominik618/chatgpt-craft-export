@@ -1,0 +1,16 @@
+{
+  "name": "chatgpt-craft-export",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Open-source browser extension adding WordCraft and PdfCraft export actions to ChatGPT responses.",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/check.mjs",
+    "test": "npm run check"
+  },
+  "license": "MIT OR Apache-2.0",
+  "engines": {
+    "node": ">=20"
+  }
+}
