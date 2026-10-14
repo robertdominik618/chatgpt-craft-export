@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const ASSISTANT_SELECTOR = '[data-message-author-role="assistant"]';
+  const ASSISTANT_SELECTOR = '[data-markdown-text-style="assistant-message"]';
   const ACTION_CLASS = "craft-export-actions";
   const BUTTON_CLASS = "craft-export-button";
   const INJECTED_ATTR = "data-craft-export-injected";
@@ -489,7 +489,7 @@
   }
 
   function findAdobePdfAction(message) {
-    const article = message.closest("article") || message.parentElement?.parentElement || message.parentElement;
+    const article = message.closest("[data-talvt-turn-state]") || message.closest("article") || message.parentElement?.parentElement || message.parentElement;
     if (!article) return null;
 
     const adobeLabels = [
@@ -509,7 +509,7 @@
   }
 
   function findNativeActionRow(message) {
-    const article = message.closest("article") || message.parentElement?.parentElement || message.parentElement;
+    const article = message.closest("[data-talvt-turn-state]") || message.closest("article") || message.parentElement?.parentElement || message.parentElement;
     if (!article) return null;
 
     const buttons = Array.from(article.querySelectorAll("button,[role='button']"));
@@ -532,7 +532,7 @@
   function injectForMessage(message) {
     if (!(message instanceof Element)) return;
 
-    const article = message.closest("article") || message.parentElement?.parentElement || message.parentElement;
+    const article = message.closest("[data-talvt-turn-state]") || message.closest("article") || message.parentElement?.parentElement || message.parentElement;
     if (!article) return;
 
     const existing = article.querySelector(`.${ACTION_CLASS}[data-craft-export-for="assistant"]`);
