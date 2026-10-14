@@ -23,7 +23,7 @@ runtimeApi.onMessage.addListener((message, _sender, sendResponse) => {
   if (!message || message.type !== "craft-export-pdf") return undefined;
 
   sendToNative({
-    action: "pdfcraft.print",
+    action: "pdfcraft.open",
     title: message.title,
     html: message.html
   })
