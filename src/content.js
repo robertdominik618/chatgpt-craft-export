@@ -488,32 +488,60 @@
     return score;
   }
 
-  function findActionBar(message) {
+  function findAdobePdfAction(message) {
     const article = message.closest("article") || message.parentElement?.parentElement || message.parentElement;
     if (!article) return null;
 
-    const candidates = Array.from(article.querySelectorAll("div")).filter((div) => {
-      const buttons = div.querySelectorAll(":scope > button, :scope > div > button");
-      return buttons.length >= 2 && div.getBoundingClientRect().height < 80;
-    });
+    const adobeLabels = [
+      "Převést do PDF",
+      "Převést chat na PDF",
+      "Convert to PDF",
+      "Convert chat to PDF"
+    ];
 
-    candidates.sort((a, b) => scoreActionBarCandidate(b) - scoreActionBarCandidate(a));
-    return candidates[0] || null;
+    const candidates = Array.from(article.querySelectorAll("button,[role='button'],a"));
+    return candidates.find((el) => {
+      const text = (el.textContent || "").replace(/\s+/g, " ").trim();
+      const aria = (el.getAttribute("aria-label") || "").replace(/\s+/g, " ").trim();
+      const title = (el.getAttribute("title") || "").replace(/\s+/g, " ").trim();
+      return adobeLabels.some((label) => text === label || aria === label || title === label);
+    }) || null;
+  }
+
+  function findNativeActionRow(message) {
+    const article = message.closest("article") || message.parentElement?.parentElement || message.parentElement;
+    if (!article) return null;
+
+    const buttons = Array.from(article.querySelectorAll("button,[role='button']"));
+    const knownActionLabels = ["Copy", "Kopírovat", "Read aloud", "Přečíst nahlas", "Regenerate", "Znovu vygenerovat", "More", "Více"];
+
+    for (const button of buttons) {
+      const label = [button.getAttribute("aria-label"), button.getAttribute("title"), button.textContent]
+        .filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+      if (!knownActionLabels.some((needle) => label.includes(needle))) continue;
+
+      let node = button.parentElement;
+      for (let depth = 0; node && depth < 4; depth += 1, node = node.parentElement) {
+        const count = node.querySelectorAll("button,[role='button']").length;
+        if (count >= 3 && node.getBoundingClientRect().height < 72) return node;
+      }
+    }
+    return null;
   }
 
   function injectForMessage(message) {
     if (!(message instanceof Element)) return;
 
-    const parent = message.parentElement;
-    if (!parent) return;
+    const article = message.closest("article") || message.parentElement?.parentElement || message.parentElement;
+    if (!article) return;
 
-    const existing = parent.querySelector(`:scope > .${ACTION_CLASS}[data-craft-export-for="assistant"]`);
+    const existing = article.querySelector(`.${ACTION_CLASS}[data-craft-export-for="assistant"]`);
     if (existing) {
       message.setAttribute(INJECTED_ATTR, "true");
       return;
     }
 
-    const actions = document.createElement("div");
+    const actions = document.createElement("span");
     actions.className = ACTION_CLASS;
     actions.setAttribute("data-craft-export-for", "assistant");
     actions.setAttribute("role", "group");
@@ -539,8 +567,23 @@
       })
     );
 
-    // Prefer a deterministic, visible position directly below the assistant
-    // message instead of attaching to ChatGPT's frequently changing action bar.
+    // Preferred anchor: place our controls immediately beside the Adobe PDF control.
+    const adobe = findAdobePdfAction(message);
+    if (adobe) {
+      adobe.insertAdjacentElement("beforebegin", actions);
+      message.setAttribute(INJECTED_ATTR, "true");
+      return;
+    }
+
+    // Fallback: keep the controls inside the native ChatGPT response-action row.
+    const nativeRow = findNativeActionRow(message);
+    if (nativeRow) {
+      nativeRow.appendChild(actions);
+      message.setAttribute(INJECTED_ATTR, "true");
+      return;
+    }
+
+    // Last resort: keep controls visible directly below the response.
     message.insertAdjacentElement("afterend", actions);
     message.setAttribute(INJECTED_ATTR, "true");
   }
