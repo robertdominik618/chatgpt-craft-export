@@ -106,7 +106,7 @@ def rpc(file_obj, ident, method, params):
         raise RuntimeError(f"PdfCraft {method}: {reply['error'].get('message', reply['error'])}")
     return reply.get("result", {})
 
-def open_in_pdfcraft_and_print(pdf_path):
+def open_in_pdfcraft(pdf_path):
     if not PDFCRAFT.exists():
         raise RuntimeError("PdfCraft.app is not installed in /Applications")
 
@@ -141,20 +141,19 @@ def open_in_pdfcraft_and_print(pdf_path):
         if not opened:
             raise RuntimeError("PdfCraft started but the generated PDF did not become active")
 
-        rpc(file_obj, 50, "ui.command", {"id": "print.dialog"})
         file_obj.close()
         sock.close()
 
 def handle(message):
-    if message.get("action") != "pdfcraft.print":
+    if message.get("action") != "pdfcraft.open":
         raise RuntimeError("unsupported action")
     title = safe_name(message.get("title"))
     html_text = message.get("html")
     if not isinstance(html_text, str) or not html_text.strip():
         raise RuntimeError("empty printable document")
     pdf_path = render_pdf(html_text, title)
-    open_in_pdfcraft_and_print(pdf_path)
-    return {"path": str(pdf_path), "openedInPdfCraft": True, "printDialog": True}
+    open_in_pdfcraft(pdf_path)
+    return {"path": str(pdf_path), "openedInPdfCraft": True}
 
 def main():
     while True:
