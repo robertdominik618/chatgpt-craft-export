@@ -6,15 +6,15 @@
     "message": "Přidává lokální export odpovědí ChatGPT do WordCraft (DOCX) a PdfCraft (PDF přes tisk)."
   },
   "wordButton": {
-    "message": "Převést do WordCraft (.docx)"
+    "message": "Převést do DOC"
   },
   "pdfButton": {
-    "message": "Převést do PdfCraft (.pdf)"
+    "message": "Převést do PDF"
   },
   "wordTooltip": {
-    "message": "Exportovat tuto odpověď ChatGPT jako standardní DOCX pro WordCraft."
+    "message": "Převést tuto odpověď do DOCX pro WordCraft."
   },
   "pdfTooltip": {
-    "message": "Otevřít čisté tiskové zobrazení pro uložení odpovědi jako PDF a otevření v PdfCraft."
+    "message": "Převést tuto odpověď do PDF pro PdfCraft."
   }
 }
