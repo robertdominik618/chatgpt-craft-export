@@ -17,8 +17,9 @@ Tlačítko **WordCraft · Převést do DOC** převede vybranou odpověď ChatGPT
 - DOCX se vytvoří lokálně.
 - Název souboru se automaticky odvodí z uživatelského promptu, ke kterému odpověď patří.
 - Nepovolené znaky v názvu souboru se odstraní a příliš dlouhý název se zkrátí.
-- Soubor se rovnou stáhne do běžného umístění pro stahované soubory.
-- WordCraft se po stažení **automaticky neotevírá**.
+- Je-li nainstalovaný volitelný macOS Native Messaging bridge, DOCX se uloží lokálně a **automaticky otevře v aplikaci WordCraft**.
+- WordCraft se explicitně aktivuje a přenese do popředí, aby byl exportovaný dokument okamžitě viditelný.
+- Pokud bridge není dostupný, doplněk použije fallback na běžné stažení DOCX v prohlížeči.
 - Export zachovává běžnou strukturu dokumentu, například nadpisy, odstavce, zvýraznění, seznamy, bloky kódu, citace, tabulky, odkazy a Unicode/češtinu.
 
 ### PdfCraft — Převést do PDF
@@ -56,6 +57,11 @@ WordCraft nativně pracuje s formátem `.docx`. Proto doplněk vytváří skute�
 | Firefox | Připraveno | Manifest V3 + Gecko ID; macOS Native Messaging installer je součástí projektu |
 | Safari | Xcode wrapper součástí | Safari Web Extension projekt je v `safari-xcode/`; pro běžnou distribuci je nutné Apple podepsání |
 
+## Kompletní přehled funkcí
+
+- [Český přehled funkcí](docs/FEATURES.cs.md)
+- [English feature reference](docs/FEATURES.en.md)
+
 ## Instalační manuály
 
 - [Český instalační manuál — Chrome, Firefox, Safari](docs/INSTALLATION.cs.md)
@@ -73,7 +79,7 @@ npm run build
 
 Potom otevřete `chrome://extensions`, zapněte **Režim pro vývojáře**, zvolte **Načíst rozbalený doplněk** a vyberte `dist/chromium`.
 
-Na macOS můžete přímé otevírání PDF v PdfCraftu aktivovat pomocí:
+Na macOS můžete přímé otevírání dokumentů ve **WordCraftu i PdfCraftu** aktivovat pomocí:
 
 ```bash
 ./native/install_macos.sh
@@ -89,7 +95,7 @@ npm run build
 
 Otevřete `about:debugging#/runtime/this-firefox`, vyberte **Načíst dočasný doplněk / Load Temporary Add-on** a zvolte `dist/firefox/manifest.json`.
 
-Na macOS skript `./native/install_macos.sh` zároveň nainstaluje Firefox Native Messaging host pro přímé otevírání souborů v PdfCraftu.
+Na macOS skript `./native/install_macos.sh` zároveň nainstaluje Firefox Native Messaging host pro přímé otevírání souborů ve WordCraftu i PdfCraftu.
 
 ### Safari
 
@@ -99,7 +105,7 @@ Postupujte podle [docs/SAFARI.md](docs/SAFARI.md). Safari používá Safari Web 
 
 Rozšíření sleduje vykreslené odpovědi asistenta a vkládá WordCraft a PdfCraft akce do lišty odpovědi ChatGPT.
 
-**DOCX cesta** vytváří standardní OOXML balíček lokálně přímo v prohlížeči.
+**DOCX cesta** vytváří standardní OOXML balíček lokálně přímo v prohlížeči. Je-li dostupný native bridge, dokument se uloží do `Downloads`, otevře se přes bundle identifier WordCraftu a WordCraft se aktivuje do popředí.
 
 **PDF cesta** při dostupném Native Messaging bridge předá tiskovou reprezentaci lokálnímu procesu na stejném počítači. Na macOS bridge lokálně vytvoří PDF, uloží ho a otevře v nainstalované aplikaci PdfCraft. Nepoužívá vzdálenou konverzní službu.
 
@@ -126,7 +132,7 @@ npm test
 npm run build
 ```
 
-Projekt obsahuje browser buildy a volitelný lokální macOS bridge pro PdfCraft.
+Projekt obsahuje browser buildy a volitelný lokální macOS bridge pro WordCraft i PdfCraft.
 
 ## Autor projektu
 
