@@ -1,0 +1,566 @@
+(() => {
+  "use strict";
+
+  const ASSISTANT_SELECTOR = '[data-message-author-role="assistant"]';
+  const ACTION_CLASS = "craft-export-actions";
+  const BUTTON_CLASS = "craft-export-button";
+  const INJECTED_ATTR = "data-craft-export-injected";
+
+  const browserApi = typeof browser !== "undefined" ? browser : chrome;
+
+  function msg(key, fallback) {
+    try {
+      return browserApi?.i18n?.getMessage?.(key) || fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  const labels = {
+    word: msg("wordButton", "Convert to WordCraft (.docx)"),
+    pdf: msg("pdfButton", "Convert to PdfCraft (.pdf)"),
+    wordTooltip: msg("wordTooltip", "Export this response as DOCX for WordCraft."),
+    pdfTooltip: msg("pdfTooltip", "Open a clean print view for saving as PDF and opening in PdfCraft.")
+  };
+
+  function sanitizeFilename(input) {
+    const cleaned = (input || "chatgpt-response")
+      .replace(/[\\/:*?"<>|\u0000-\u001F]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 80);
+    return cleaned || "chatgpt-response";
+  }
+
+  function titleFromMessage(message) {
+    const heading = message.querySelector("h1,h2,h3");
+    const source = heading?.textContent || message.textContent || "ChatGPT response";
+    return sanitizeFilename(source);
+  }
+
+  function cleanClone(message) {
+    const clone = message.cloneNode(true);
+    clone.querySelectorAll("button,svg,[role='button'],.craft-export-actions").forEach((node) => node.remove());
+    return clone;
+  }
+
+  function escapeXml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;");
+  }
+
+  function normalizeText(value) {
+    return String(value ?? "")
+      .replace(/\u00a0/g, " ")
+      .replace(/[ \t]+\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
+
+  function textRun(text, options = {}) {
+    if (!text) return "";
+    const props = [];
+    if (options.bold) props.push("<w:b/>");
+    if (options.italic) props.push("<w:i/>");
+    if (options.code) {
+      props.push('<w:rFonts w:ascii="Menlo" w:hAnsi="Menlo"/>');
+      props.push('<w:shd w:val="clear" w:color="auto" w:fill="F3F4F6"/>');
+    }
+    return `<w:r>${props.length ? `<w:rPr>${props.join("")}</w:rPr>` : ""}<w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r>`;
+  }
+
+  function inlineRuns(node, inherited = {}) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return textRun(node.nodeValue, inherited);
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return "";
+
+    const tag = node.tagName.toLowerCase();
+    const next = { ...inherited };
+    if (tag === "strong" || tag === "b") next.bold = true;
+    if (tag === "em" || tag === "i") next.italic = true;
+    if (tag === "code") next.code = true;
+
+    if (tag === "br") {
+      return "<w:r><w:br/></w:r>";
+    }
+
+    if (tag === "a") {
+      const label = normalizeText(node.textContent);
+      const href = node.getAttribute("href");
+      const combined = href && href !== label ? `${label} (${href})` : label;
+      return textRun(combined, next);
+    }
+
+    return Array.from(node.childNodes).map((child) => inlineRuns(child, next)).join("");
+  }
+
+  function paragraphXml(node, style = null, prefix = "") {
+    const runs = prefix ? textRun(prefix, { bold: true }) + inlineRuns(node) : inlineRuns(node);
+    const pPr = [];
+    if (style) pPr.push(`<w:pStyle w:val="${style}"/>`);
+    return `<w:p>${pPr.length ? `<w:pPr>${pPr.join("")}</w:pPr>` : ""}${runs || textRun(" ")}</w:p>`;
+  }
+
+  function codeParagraphXml(text) {
+    const lines = String(text || "").replace(/\r\n/g, "\n").split("\n");
+    return lines
+      .map((line) =>
+        `<w:p><w:pPr><w:shd w:val="clear" w:color="auto" w:fill="F3F4F6"/><w:spacing w:before="0" w:after="0"/></w:pPr>${textRun(line || " ", { code: true })}</w:p>`
+      )
+      .join("");
+  }
+
+  function tableXml(table) {
+    const rows = Array.from(table.querySelectorAll(":scope > thead > tr, :scope > tbody > tr, :scope > tr"));
+    if (!rows.length) return paragraphXml(table);
+    const body = rows.map((row) => {
+      const cells = Array.from(row.children).filter((el) => /^(TD|TH)$/.test(el.tagName));
+      const cellXml = cells.map((cell) => {
+        const isHeader = cell.tagName === "TH";
+        const content = textRun(normalizeText(cell.textContent) || " ", { bold: isHeader });
+        return `<w:tc><w:tcPr><w:tcW w:w="2400" w:type="dxa"/></w:tcPr><w:p>${content}</w:p></w:tc>`;
+      }).join("");
+      return `<w:tr>${cellXml}</w:tr>`;
+    }).join("");
+    return `<w:tbl><w:tblPr><w:tblBorders><w:top w:val="single" w:sz="4" w:color="D1D5DB"/><w:left w:val="single" w:sz="4" w:color="D1D5DB"/><w:bottom w:val="single" w:sz="4" w:color="D1D5DB"/><w:right w:val="single" w:sz="4" w:color="D1D5DB"/><w:insideH w:val="single" w:sz="4" w:color="E5E7EB"/><w:insideV w:val="single" w:sz="4" w:color="E5E7EB"/></w:tblBorders></w:tblPr><w:tblGrid/>${body}</w:tbl>`;
+  }
+
+  function blockXml(root) {
+    const blocks = [];
+    const top = Array.from(root.children);
+
+    const emit = (node, listPrefix = "") => {
+      if (!(node instanceof Element)) return;
+      const tag = node.tagName.toLowerCase();
+
+      if (/^h[1-6]$/.test(tag)) {
+        const level = Math.min(Number(tag[1]), 3);
+        blocks.push(paragraphXml(node, `Heading${level}`));
+        return;
+      }
+      if (tag === "p") {
+        blocks.push(paragraphXml(node));
+        return;
+      }
+      if (tag === "pre") {
+        blocks.push(codeParagraphXml(node.textContent));
+        return;
+      }
+      if (tag === "blockquote") {
+        blocks.push(`<w:p><w:pPr><w:ind w:left="720"/><w:color w:val="4B5563"/></w:pPr>${inlineRuns(node)}</w:p>`);
+        return;
+      }
+      if (tag === "table") {
+        blocks.push(tableXml(node));
+        return;
+      }
+      if (tag === "ul" || tag === "ol") {
+        Array.from(node.children).filter((el) => el.tagName === "LI").forEach((li, index) => {
+          const prefix = tag === "ul" ? "• " : `${index + 1}. `;
+          blocks.push(paragraphXml(li, null, prefix));
+        });
+        return;
+      }
+      if (tag === "hr") {
+        blocks.push('<w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="D1D5DB"/></w:pBdr></w:pPr></w:p>');
+        return;
+      }
+
+      const meaningfulChildren = Array.from(node.children).filter((child) =>
+        ["H1","H2","H3","H4","H5","H6","P","PRE","BLOCKQUOTE","TABLE","UL","OL","HR","DIV","SECTION"].includes(child.tagName)
+      );
+      if (meaningfulChildren.length) {
+        meaningfulChildren.forEach((child) => emit(child, listPrefix));
+      } else {
+        const text = normalizeText(node.textContent);
+        if (text) blocks.push(paragraphXml(node));
+      }
+    };
+
+    top.forEach((node) => emit(node));
+    if (!blocks.length && normalizeText(root.textContent)) {
+      blocks.push(paragraphXml(root));
+    }
+    return blocks.join("");
+  }
+
+  function utf8Bytes(text) {
+    return new TextEncoder().encode(text);
+  }
+
+  function crc32(bytes) {
+    let crc = 0xffffffff;
+    for (const byte of bytes) {
+      crc ^= byte;
+      for (let i = 0; i < 8; i++) {
+        crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
+      }
+    }
+    return (crc ^ 0xffffffff) >>> 0;
+  }
+
+  function u16(value) {
+    return new Uint8Array([value & 0xff, (value >>> 8) & 0xff]);
+  }
+
+  function u32(value) {
+    return new Uint8Array([
+      value & 0xff,
+      (value >>> 8) & 0xff,
+      (value >>> 16) & 0xff,
+      (value >>> 24) & 0xff
+    ]);
+  }
+
+  function concatBytes(parts) {
+    const total = parts.reduce((sum, part) => sum + part.length, 0);
+    const out = new Uint8Array(total);
+    let offset = 0;
+    for (const part of parts) {
+      out.set(part, offset);
+      offset += part.length;
+    }
+    return out;
+  }
+
+  function dosDateTime(date = new Date()) {
+    const year = Math.max(1980, date.getFullYear());
+    const dosTime = (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2);
+    const dosDate = ((year - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate();
+    return { dosTime, dosDate };
+  }
+
+  function zipStore(entries) {
+    const localParts = [];
+    const centralParts = [];
+    let offset = 0;
+    const { dosTime, dosDate } = dosDateTime();
+
+    for (const entry of entries) {
+      const name = utf8Bytes(entry.name);
+      const data = entry.data instanceof Uint8Array ? entry.data : utf8Bytes(entry.data);
+      const crc = crc32(data);
+
+      const local = concatBytes([
+        u32(0x04034b50),
+        u16(20),
+        u16(0x0800),
+        u16(0),
+        u16(dosTime),
+        u16(dosDate),
+        u32(crc),
+        u32(data.length),
+        u32(data.length),
+        u16(name.length),
+        u16(0),
+        name,
+        data
+      ]);
+      localParts.push(local);
+
+      const central = concatBytes([
+        u32(0x02014b50),
+        u16(20),
+        u16(20),
+        u16(0x0800),
+        u16(0),
+        u16(dosTime),
+        u16(dosDate),
+        u32(crc),
+        u32(data.length),
+        u32(data.length),
+        u16(name.length),
+        u16(0),
+        u16(0),
+        u16(0),
+        u16(0),
+        u32(0),
+        u32(offset),
+        name
+      ]);
+      centralParts.push(central);
+      offset += local.length;
+    }
+
+    const central = concatBytes(centralParts);
+    const end = concatBytes([
+      u32(0x06054b50),
+      u16(0),
+      u16(0),
+      u16(entries.length),
+      u16(entries.length),
+      u32(central.length),
+      u32(offset),
+      u16(0)
+    ]);
+
+    return concatBytes([...localParts, central, end]);
+  }
+
+  function buildDocxBlob(message) {
+    const clean = cleanClone(message);
+    const title = titleFromMessage(clean);
+    const body = blockXml(clean);
+    const created = new Date().toISOString();
+
+    const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    ${body}
+    <w:sectPr>
+      <w:pgSz w:w="11906" w:h="16838"/>
+      <w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/>
+    </w:sectPr>
+  </w:body>
+</w:document>`;
+
+    const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:style w:type="paragraph" w:default="1" w:styleId="Normal">
+    <w:name w:val="Normal"/>
+    <w:rPr><w:rFonts w:ascii="Aptos" w:hAnsi="Aptos"/><w:sz w:val="22"/></w:rPr>
+    <w:pPr><w:spacing w:after="160" w:line="276" w:lineRule="auto"/></w:pPr>
+  </w:style>
+  <w:style w:type="paragraph" w:styleId="Heading1">
+    <w:name w:val="heading 1"/><w:basedOn w:val="Normal"/>
+    <w:rPr><w:b/><w:sz w:val="34"/></w:rPr><w:pPr><w:spacing w:before="260" w:after="140"/></w:pPr>
+  </w:style>
+  <w:style w:type="paragraph" w:styleId="Heading2">
+    <w:name w:val="heading 2"/><w:basedOn w:val="Normal"/>
+    <w:rPr><w:b/><w:sz w:val="28"/></w:rPr><w:pPr><w:spacing w:before="220" w:after="120"/></w:pPr>
+  </w:style>
+  <w:style w:type="paragraph" w:styleId="Heading3">
+    <w:name w:val="heading 3"/><w:basedOn w:val="Normal"/>
+    <w:rPr><w:b/><w:sz w:val="24"/></w:rPr><w:pPr><w:spacing w:before="180" w:after="100"/></w:pPr>
+  </w:style>
+</w:styles>`;
+
+    const entries = [
+      {
+        name: "[Content_Types].xml",
+        data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+  <Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
+  <Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
+</Types>`
+      },
+      {
+        name: "_rels/.rels",
+        data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>
+</Relationships>`
+      },
+      {
+        name: "word/document.xml",
+        data: documentXml
+      },
+      {
+        name: "word/styles.xml",
+        data: stylesXml
+      },
+      {
+        name: "word/_rels/document.xml.rels",
+        data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`
+      },
+      {
+        name: "docProps/core.xml",
+        data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <dc:title>${escapeXml(title)}</dc:title>
+  <dc:creator>Craft Export for ChatGPT</dc:creator>
+  <cp:lastModifiedBy>Craft Export for ChatGPT</cp:lastModifiedBy>
+  <dcterms:created xsi:type="dcterms:W3CDTF">${created}</dcterms:created>
+  <dcterms:modified xsi:type="dcterms:W3CDTF">${created}</dcterms:modified>
+</cp:coreProperties>`
+      },
+      {
+        name: "docProps/app.xml",
+        data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">
+  <Application>Craft Export for ChatGPT</Application>
+</Properties>`
+      }
+    ];
+
+    const bytes = zipStore(entries);
+    return {
+      blob: new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }),
+      title
+    };
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.style.display = "none";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  }
+
+  function openPdfPrintView(message) {
+    const clean = cleanClone(message);
+    const title = titleFromMessage(clean);
+    const popup = window.open("", "_blank", "noopener,noreferrer");
+    if (!popup) {
+      alert("The browser blocked the print window. Please allow pop-ups for chatgpt.com and try again.");
+      return;
+    }
+
+    const style = `
+      :root { color-scheme: light; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: #fff;
+        color: #111827;
+        font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      main { max-width: 820px; margin: 0 auto; padding: 48px 56px 72px; }
+      h1,h2,h3,h4 { line-height: 1.2; margin: 1.35em 0 .55em; }
+      p,ul,ol,pre,blockquote,table { margin: 0 0 1em; }
+      pre { padding: 14px 16px; overflow-wrap: anywhere; white-space: pre-wrap; background: #f3f4f6; border-radius: 10px; }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: #f3f4f6; padding: .08em .28em; border-radius: 4px; }
+      pre code { padding: 0; }
+      blockquote { margin-left: 0; padding-left: 16px; border-left: 3px solid #d1d5db; color: #4b5563; }
+      table { width: 100%; border-collapse: collapse; }
+      th,td { border: 1px solid #d1d5db; padding: 8px 10px; vertical-align: top; }
+      a { color: inherit; text-decoration: underline; }
+      .craft-print-meta { margin-bottom: 28px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb; color: #6b7280; font-size: 12px; }
+      @page { size: A4; margin: 18mm; }
+      @media print {
+        main { max-width: none; padding: 0; }
+        .craft-print-meta { color: #555; }
+      }
+    `;
+
+    popup.document.open();
+    popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeXml(title)}</title><style>${style}</style></head><body><main><div class="craft-print-meta">Exported from ChatGPT with Craft Export for ChatGPT</div>${clean.innerHTML}</main><script>window.addEventListener("load",()=>setTimeout(()=>window.print(),120));<\/script></body></html>`);
+    popup.document.close();
+  }
+
+  function icon(kind) {
+    if (kind === "word") {
+      return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.75h10.5L19 7.25V20.25H5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M15.5 3.75v3.5H19M7.8 10.2l1.45 5.3 1.55-4.15 1.55 4.15 1.45-5.3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    }
+    return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.75h10.5L19 7.25V20.25H5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M15.5 3.75v3.5H19M8 15.6v-5h2a1.5 1.5 0 0 1 0 3H8m5-3h1.5a2 2 0 0 1 0 4H13z" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  }
+
+  function makeButton(kind, label, tooltip, onClick) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = BUTTON_CLASS;
+    button.setAttribute("aria-label", label);
+    button.title = tooltip;
+    button.innerHTML = `${icon(kind)}<span>${escapeXml(label)}</span>`;
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      onClick();
+    });
+    return button;
+  }
+
+  function scoreActionBarCandidate(element) {
+    const buttons = element.querySelectorAll(":scope > button, :scope > div > button");
+    const text = (element.getAttribute("class") || "").toLowerCase();
+    let score = Math.min(buttons.length, 8);
+    if (text.includes("flex")) score += 1;
+    if (text.includes("gap")) score += 1;
+    return score;
+  }
+
+  function findActionBar(message) {
+    const article = message.closest("article") || message.parentElement?.parentElement || message.parentElement;
+    if (!article) return null;
+
+    const candidates = Array.from(article.querySelectorAll("div")).filter((div) => {
+      const buttons = div.querySelectorAll(":scope > button, :scope > div > button");
+      return buttons.length >= 2 && div.getBoundingClientRect().height < 80;
+    });
+
+    candidates.sort((a, b) => scoreActionBarCandidate(b) - scoreActionBarCandidate(a));
+    return candidates[0] || null;
+  }
+
+  function injectForMessage(message) {
+    if (!(message instanceof Element)) return;
+    if (message.getAttribute(INJECTED_ATTR) === "true") return;
+
+    const actionBar = findActionBar(message);
+    const host = actionBar || message.parentElement;
+    if (!host) return;
+
+    if (host.querySelector(`.${ACTION_CLASS}`)) {
+      message.setAttribute(INJECTED_ATTR, "true");
+      return;
+    }
+
+    const actions = document.createElement("div");
+    actions.className = ACTION_CLASS;
+
+    actions.append(
+      makeButton("word", labels.word, labels.wordTooltip, () => {
+        try {
+          const { blob, title } = buildDocxBlob(message);
+          downloadBlob(blob, `${title}.docx`);
+        } catch (error) {
+          console.error("[Craft Export] DOCX export failed", error);
+          alert("DOCX export failed. Please refresh ChatGPT and try again.");
+        }
+      }),
+      makeButton("pdf", labels.pdf, labels.pdfTooltip, () => {
+        try {
+          openPdfPrintView(message);
+        } catch (error) {
+          console.error("[Craft Export] PDF print view failed", error);
+          alert("PDF export failed. Please refresh ChatGPT and try again.");
+        }
+      })
+    );
+
+    host.appendChild(actions);
+    message.setAttribute(INJECTED_ATTR, "true");
+  }
+
+  function scan() {
+    document.querySelectorAll(ASSISTANT_SELECTOR).forEach(injectForMessage);
+  }
+
+  let scheduled = false;
+  function scheduleScan() {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => {
+      scheduled = false;
+      scan();
+    });
+  }
+
+  const observer = new MutationObserver(scheduleScan);
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", scan, { once: true });
+  } else {
+    scan();
+  }
+})();
