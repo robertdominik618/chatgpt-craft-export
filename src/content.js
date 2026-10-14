@@ -5,11 +5,18 @@
   const ACTION_CLASS = "craft-export-actions";
   const BUTTON_CLASS = "craft-export-button";
   const INJECTED_ATTR = "data-craft-export-injected";
+  const INSTANCE_ATTR = "data-craft-export-active-instance";
+  const INSTANCE_ID = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const actionHandlers = new WeakMap();
   let hoverTooltip = null;
   let domObserver = null;
 
   const browserApi = typeof browser !== "undefined" ? browser : chrome;
+  document.documentElement.setAttribute(INSTANCE_ATTR, INSTANCE_ID);
+
+  function isActiveInstance() {
+    return document.documentElement.getAttribute(INSTANCE_ATTR) === INSTANCE_ID;
+  }
 
   function extensionContextAlive() {
     try {
@@ -664,18 +671,21 @@
   // Run on pointerdown, before ChatGPT/React can replace the toolbar node between
   // pointerdown and click. A click fallback keeps keyboard activation accessible.
   window.addEventListener("pointerdown", (event) => {
+    if (!isActiveInstance()) return;
     const button = craftButtonFromEvent(event);
     if (!button) return;
     runCraftAction(button, event);
   }, true);
 
   window.addEventListener("click", (event) => {
+    if (!isActiveInstance()) return;
     const button = craftButtonFromEvent(event);
     if (!button) return;
     runCraftAction(button, event);
   }, true);
 
   window.addEventListener("keydown", (event) => {
+    if (!isActiveInstance()) return;
     if (event.key !== "Enter" && event.key !== " ") return;
     const button = craftButtonFromEvent(event);
     if (!button) return;
@@ -722,6 +732,7 @@
   let hoveredCraftButton = null;
 
   window.addEventListener("pointermove", (event) => {
+    if (!isActiveInstance()) return;
     const button = craftButtonFromEvent(event);
     if (button === hoveredCraftButton) return;
 
@@ -736,17 +747,20 @@
   }, true);
 
   window.addEventListener("pointerleave", () => {
+    if (!isActiveInstance()) return;
     if (hoveredCraftButton) hideCraftHover(hoveredCraftButton);
     hoveredCraftButton = null;
     hoverTooltip?.classList.remove("craft-export-hover-tooltip--visible");
   }, true);
 
   window.addEventListener("focusin", (event) => {
+    if (!isActiveInstance()) return;
     const button = craftButtonFromEvent(event);
     if (button) showCraftHover(button);
   }, true);
 
   window.addEventListener("focusout", (event) => {
+    if (!isActiveInstance()) return;
     const button = craftButtonFromEvent(event);
     if (button) hideCraftHover(button);
   }, true);
@@ -909,11 +923,17 @@
   }
 
   function scan() {
+    if (!isActiveInstance()) return;
     document.querySelectorAll(ASSISTANT_SELECTOR).forEach(injectForMessage);
   }
 
   let scheduled = false;
   function scheduleScan() {
+    if (!isActiveInstance()) {
+      domObserver?.disconnect();
+      domObserver = null;
+      return;
+    }
     if (scheduled) return;
     scheduled = true;
     requestAnimationFrame(() => {
