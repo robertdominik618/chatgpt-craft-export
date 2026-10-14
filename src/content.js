@@ -728,7 +728,12 @@
       "Convert chat to PDF"
     ];
 
-    const candidates = Array.from(article.querySelectorAll("button,[role='button'],a"));
+    const explicitAdobe = article.querySelector(".acrobat-chatgpt-response-convert-btn");
+    if (explicitAdobe) return explicitAdobe;
+
+    const candidates = Array.from(article.querySelectorAll("button,[role='button'],a"))
+      .filter((el) => !el.closest(".craft-export-actions"));
+
     return candidates.find((el) => {
       const text = (el.textContent || "").replace(/\s+/g, " ").trim();
       const aria = (el.getAttribute("aria-label") || "").replace(/\s+/g, " ").trim();
@@ -768,7 +773,13 @@
     if (existing) {
       const adobe = findAdobePdfAction(message);
       const adobeGroup = adobe?.parentElement;
-      if (adobeGroup && adobeGroup.nextElementSibling !== existing) {
+      if (
+        adobeGroup
+        && adobeGroup !== existing
+        && !existing.contains(adobeGroup)
+        && !adobeGroup.contains(existing)
+        && adobeGroup.nextElementSibling !== existing
+      ) {
         adobeGroup.insertAdjacentElement("afterend", existing);
       }
       message.setAttribute(INJECTED_ATTR, "true");
@@ -812,9 +823,12 @@
     // Preferred anchor: place our controls immediately beside the Adobe PDF control.
     const adobe = findAdobePdfAction(message);
     if (adobe?.parentElement) {
-      adobe.parentElement.insertAdjacentElement("afterend", actions);
-      message.setAttribute(INJECTED_ATTR, "true");
-      return;
+      const adobeGroup = adobe.parentElement;
+      if (adobeGroup !== actions && !actions.contains(adobeGroup) && !adobeGroup.contains(actions)) {
+        adobeGroup.insertAdjacentElement("afterend", actions);
+        message.setAttribute(INJECTED_ATTR, "true");
+        return;
+      }
     }
 
     // Fallback: keep the controls inside the native ChatGPT response-action row.
