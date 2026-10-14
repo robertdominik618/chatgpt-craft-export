@@ -33,6 +33,12 @@
   }
 
   function titleFromMessage(message) {
+    const turn = message.closest("[data-talvt-turn-state]") || message.closest("article");
+    const prompt = turn?.querySelector('[data-user-message-bubble="true"]')
+      || turn?.querySelector('[data-content-search-unit-key$=":user"]');
+    const promptText = normalizeText(prompt?.textContent || "");
+    if (promptText) return sanitizeFilename(promptText);
+
     const heading = message.querySelector("h1,h2,h3");
     const source = heading?.textContent || message.textContent || "ChatGPT response";
     return sanitizeFilename(source);
@@ -418,12 +424,18 @@
 
   function openPdfPrintView(message) {
     const clean = cleanClone(message);
-    const title = titleFromMessage(clean);
-    const popup = window.open("", "_blank", "noopener,noreferrer");
-    if (!popup) {
-      alert("The browser blocked the print window. Please allow pop-ups for chatgpt.com and try again.");
-      return;
-    }
+    const title = titleFromMessage(message);
+    const iframe = document.createElement("iframe");
+    iframe.className = "craft-export-print-frame";
+    iframe.setAttribute("aria-hidden", "true");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "1px";
+    iframe.style.height = "1px";
+    iframe.style.border = "0";
+    iframe.style.opacity = "0";
+    iframe.style.pointerEvents = "none";
 
     const style = `
       :root { color-scheme: light; }
@@ -452,9 +464,27 @@
       }
     `;
 
-    popup.document.open();
-    popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeXml(title)}</title><style>${style}</style></head><body><main><div class="craft-print-meta">Exported from ChatGPT with Craft Export for ChatGPT</div>${clean.innerHTML}</main><script>window.addEventListener("load",()=>setTimeout(()=>window.print(),120));<\/script></body></html>`);
-    popup.document.close();
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeXml(title)}</title><style>${style}</style></head><body><main><div class="craft-print-meta">Exported from ChatGPT with Craft Export for ChatGPT</div>${clean.innerHTML}</main></body></html>`;
+
+    iframe.addEventListener("load", () => {
+      try {
+        const win = iframe.contentWindow;
+        if (!win) throw new Error("Print frame unavailable");
+        win.document.title = title;
+        setTimeout(() => {
+          win.focus();
+          win.print();
+          setTimeout(() => iframe.remove(), 1500);
+        }, 150);
+      } catch (error) {
+        iframe.remove();
+        console.error("[Craft Export] PDF print failed", error);
+        alert("PDF export failed. Please try again.");
+      }
+    }, { once: true });
+
+    document.body.appendChild(iframe);
+    iframe.srcdoc = html;
   }
 
   function icon(kind) {
@@ -471,7 +501,7 @@
     button.className = BUTTON_CLASS;
     button.setAttribute("aria-label", label);
     button.title = tooltip;
-    button.innerHTML = icon(kind);
+    button.innerHTML = `${icon(kind)}<span class="craft-export-label">${escapeXml(label)}</span>`;
     button.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -538,6 +568,10 @@
 
     const existing = article.querySelector(`.${ACTION_CLASS}[data-craft-export-for="assistant"]`);
     if (existing) {
+      const adobe = findAdobePdfAction(message);
+      if (adobe && adobe.nextElementSibling !== existing) {
+        adobe.insertAdjacentElement("afterend", existing);
+      }
       message.setAttribute(INJECTED_ATTR, "true");
       return;
     }
