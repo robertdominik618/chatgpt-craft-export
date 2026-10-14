@@ -1,5 +1,7 @@
 # Safari build
 
+A generated Xcode wrapper is committed in `safari-xcode/`. It was validated with an unsigned local macOS Debug build on 2026-10-14. Public distribution still requires Apple signing.
+
 Safari Web Extensions use the WebExtension source but require an Apple Xcode host application for signing and distribution.
 
 ## Prerequisites

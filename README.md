@@ -23,7 +23,7 @@ WordCraft's current documented workflow reads and writes `.docx` natively. This 
 | --- | --- | --- |
 | Chrome / Chromium / Edge | Ready | Manifest V3 build |
 | Firefox | Ready | Manifest V3 + Gecko ID |
-| Safari | Source-ready | Convert the Chromium build with Apple's Safari Web Extension Converter |
+| Safari | Xcode wrapper included | Generated Safari Web Extension project is included under `safari-xcode/`; signing is still required for distribution |
 
 ## Quick start
 
