@@ -171,7 +171,9 @@ def open_in_wordcraft(title, base64_data):
     out.write_bytes(data)
     if out.stat().st_size == 0:
         raise RuntimeError("DOCX write failed")
-    subprocess.run(["/usr/bin/open", "-a", "WordCraft", str(out)], check=True)
+    subprocess.run(["/usr/bin/open", "-b", "ai.storyteller.wordcraft", str(out)], check=True)
+    subprocess.run(["/usr/bin/open", "-b", "ai.storyteller.wordcraft"], check=True)
+    subprocess.run(["/usr/bin/osascript", "-e", 'tell application id "ai.storyteller.wordcraft" to activate'], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     return out
 
 def handle(message):
