@@ -26,7 +26,7 @@ for (const file of [
 
 const source = await readFile(resolve(root, "src/content.js"), "utf8");
 for (const needle of [
-  'data-message-author-role="assistant"',
+  'data-markdown-text-style="assistant-message"',
   "buildDocxBlob",
   "openPdfPrintView",
   "MutationObserver",
