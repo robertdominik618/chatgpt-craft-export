@@ -5,6 +5,7 @@
   const ACTION_CLASS = "craft-export-actions";
   const BUTTON_CLASS = "craft-export-button";
   const INJECTED_ATTR = "data-craft-export-injected";
+  const actionHandlers = new WeakMap();
 
   const browserApi = typeof browser !== "undefined" ? browser : chrome;
 
@@ -540,6 +541,7 @@
     button.setAttribute("aria-label", label);
     button.title = tooltip;
     button.innerHTML = `${icon(kind)}<span class="craft-export-label">${escapeXml(label)}</span>`;
+    actionHandlers.set(button, onClick);
     button.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -547,6 +549,19 @@
     });
     return button;
   }
+
+  // ChatGPT installs interaction handlers around the response toolbar. Intercept
+  // Craft button clicks at the window capture phase so those handlers cannot swallow
+  // the user click before it reaches our button.
+  window.addEventListener("click", (event) => {
+    const target = event.target instanceof Element ? event.target.closest(`.${BUTTON_CLASS}`) : null;
+    if (!(target instanceof HTMLButtonElement)) return;
+    const handler = actionHandlers.get(target);
+    if (!handler) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    handler();
+  }, true);
 
   function scoreActionBarCandidate(element) {
     const buttons = element.querySelectorAll(":scope > button, :scope > div > button");
