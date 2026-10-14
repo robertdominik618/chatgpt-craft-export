@@ -69,3 +69,8 @@
 .craft-export-print-frame {
   visibility: hidden;
 }
+
+.craft-export-button--active {
+  transform: scale(0.96);
+  opacity: 0.72;
+}
