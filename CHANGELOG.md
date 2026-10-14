@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.1 - 2026-10-14
+
+- Removed the final `insertAdjacentElement` code path that could still trigger `HierarchyRequestError`.
+- Toolbar placement now uses guarded `parent.insertBefore(...)` logic only.
+- Corrupted/stale Craft toolbar nesting is discarded and recreated instead of re-parented through an unsafe DOM relationship.
+- Native bridge calls now detect an invalidated extension context and fail cleanly instead of throwing uncaught runtime errors.
+- Rebuilt Chromium and Firefox development packages.
+
 ## 0.2.9 - 2026-10-14
 
 - Fixed `HierarchyRequestError` caused by the Adobe-action detector accidentally matching the Craft PdfCraft button itself.
