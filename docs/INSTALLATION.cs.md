@@ -149,11 +149,11 @@ Rozšíření potřebuje přístup pouze k ChatGPT webovým doménám, aby mohlo
 
 Projekt:
 
-- nepoužívá vlastní backend,
-- neposílá obsah konverzace na vlastní server,
+- nepoužívá vlastní cloudový backend pro konverzi,
 - nepoužívá analytiku ani telemetry SDK,
-- export DOCX vytváří lokálně,
-- PDF používá lokální tiskový workflow prohlížeče.
+- DOCX vytváří lokálně,
+- na macOS může použít volitelný lokální Native Messaging bridge pro uložení/otevření DOCX ve WordCraftu a PDF v PdfCraftu,
+- při nedostupném bridge použije běžný download/print fallback prohlížeče.
 
 Více viz:
 - [PRIVACY.md](../PRIVACY.md)
@@ -180,9 +180,26 @@ Safari:
 - ověřte povolení pro `chatgpt.com`,
 - znovu spusťte hostitelskou aplikaci z Xcode, pokud testujete vývojovou verzi.
 
-### WordCraft / DOCX funguje, ale PDF ne
+### Přímé otevření ve WordCraftu/PdfCraftu na macOS
 
-PDF export používá tiskový mechanismus prohlížeče. Po kliknutí na PdfCraft akci by se měl otevřít tiskový dialog. Jako cíl zvolte **Uložit jako PDF / Save as PDF**.
+Pro přímé otevírání desktopových aplikací spusťte v kořeni repozitáře:
+
+```bash
+./native/install_macos.sh
+```
+
+Poté znovu načtěte doplněk a proveďte tvrdý refresh ChatGPT.
+
+Očekávané chování s nainstalovaným bridge:
+
+- **WordCraft — Převést do DOC**: vytvoří DOCX, uloží ho do `~/Downloads`, otevře ho ve WordCraftu a WordCraft přenese do popředí.
+- **PdfCraft — Převést do PDF**: vytvoří PDF, uloží ho do `~/Downloads` a otevře ho v PdfCraftu. Tiskový dialog se automaticky neotevírá.
+
+Pokud bridge není dostupný, WordCraft použije běžné stažení DOCX a PdfCraft fallback na tisk/PDF v prohlížeči.
+
+### Stabilní umístění rozbaleného doplňku
+
+Pro dlouhodobé vývojové použití nedoporučujeme nechávat rozbalený doplněk v dočasné složce Downloads, která může být později smazána. Lepší je stabilní adresář v uživatelském profilu nebo ve workspace projektu. Pokud se zdrojová složka přesune nebo zmizí, Chrome může mít část starého kódu ještě v paměti, ale ikony a další web-accessible resources přestanou fungovat.
 
 ### Název exportovaného souboru
 
