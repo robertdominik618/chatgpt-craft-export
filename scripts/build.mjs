@@ -12,6 +12,7 @@ for (const browser of ["chromium", "firefox"]) {
   await mkdir(out, { recursive: true });
   await cp(resolve(root, "src/content.js"), resolve(out, "content.js"));
   await cp(resolve(root, "src/content.css"), resolve(out, "content.css"));
+  await cp(resolve(root, "src/background.js"), resolve(out, "background.js"));
   await cp(resolve(root, "_locales"), resolve(out, "_locales"), { recursive: true });
   await cp(resolve(root, "assets"), resolve(out, "assets"), { recursive: true });
   const manifest = await readFile(resolve(root, `manifests/${browser}.json`), "utf8");

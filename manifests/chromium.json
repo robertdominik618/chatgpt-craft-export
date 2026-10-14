@@ -1,9 +1,15 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extensionName__",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "__MSG_extensionDescription__",
   "default_locale": "en",
+  "permissions": [
+    "nativeMessaging"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
       "matches": [
