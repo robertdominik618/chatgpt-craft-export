@@ -6,6 +6,7 @@
   const BUTTON_CLASS = "craft-export-button";
   const INJECTED_ATTR = "data-craft-export-injected";
   const actionHandlers = new WeakMap();
+  let hoverTooltip = null;
 
   const browserApi = typeof browser !== "undefined" ? browser : chrome;
 
@@ -594,6 +595,65 @@
     runCraftAction(button, event);
   }, true);
 
+  function ensureHoverTooltip() {
+    if (hoverTooltip?.isConnected) return hoverTooltip;
+    hoverTooltip = document.createElement("div");
+    hoverTooltip.className = "craft-export-hover-tooltip";
+    hoverTooltip.setAttribute("role", "tooltip");
+    document.body.appendChild(hoverTooltip);
+    return hoverTooltip;
+  }
+
+  function showCraftHover(button) {
+    const tooltip = ensureHoverTooltip();
+    const text = button.getAttribute("data-craft-tooltip") || button.getAttribute("aria-label") || "";
+    tooltip.textContent = text;
+    button.classList.add("craft-export-button--hover");
+
+    const rect = button.getBoundingClientRect();
+    tooltip.style.left = `${rect.left + rect.width / 2}px`;
+    tooltip.style.top = `${rect.bottom + 10}px`;
+    tooltip.classList.add("craft-export-hover-tooltip--visible");
+
+    requestAnimationFrame(() => {
+      const tr = tooltip.getBoundingClientRect();
+      const pad = 10;
+      let x = rect.left + rect.width / 2;
+      if (tr.left < pad) x += pad - tr.left;
+      if (tr.right > window.innerWidth - pad) x -= tr.right - (window.innerWidth - pad);
+      tooltip.style.left = `${x}px`;
+    });
+  }
+
+  function hideCraftHover(button) {
+    button?.classList.remove("craft-export-button--hover");
+    hoverTooltip?.classList.remove("craft-export-hover-tooltip--visible");
+  }
+
+  window.addEventListener("pointerover", (event) => {
+    const button = craftButtonFromEvent(event);
+    if (!button) return;
+    showCraftHover(button);
+  }, true);
+
+  window.addEventListener("pointerout", (event) => {
+    const button = craftButtonFromEvent(event);
+    if (!button) return;
+    const next = event.relatedTarget;
+    if (next instanceof Node && button.contains(next)) return;
+    hideCraftHover(button);
+  }, true);
+
+  window.addEventListener("focusin", (event) => {
+    const button = craftButtonFromEvent(event);
+    if (button) showCraftHover(button);
+  }, true);
+
+  window.addEventListener("focusout", (event) => {
+    const button = craftButtonFromEvent(event);
+    if (button) hideCraftHover(button);
+  }, true);
+
   function scoreActionBarCandidate(element) {
     const buttons = element.querySelectorAll(":scope > button, :scope > div > button");
     const text = (element.getAttribute("class") || "").toLowerCase();
@@ -666,6 +726,11 @@
     actions.setAttribute("data-craft-export-for", "assistant");
     actions.setAttribute("role", "group");
     actions.setAttribute("aria-label", "Craft export actions");
+
+    const divider = document.createElement("span");
+    divider.className = "craft-export-divider";
+    divider.setAttribute("aria-hidden", "true");
+    actions.appendChild(divider);
 
     actions.append(
       makeButton("word", labels.word, labels.wordTooltip, () => {
