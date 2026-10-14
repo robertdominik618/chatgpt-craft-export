@@ -540,8 +540,8 @@
     button.className = BUTTON_CLASS;
     button.setAttribute("aria-label", label);
     button.setAttribute("data-craft-kind", kind);
-    button.title = tooltip;
-    button.innerHTML = `${icon(kind)}<span class="craft-export-label">${escapeXml(label)}</span>`;
+    button.removeAttribute("title");
+    button.innerHTML = `${icon(kind)}<span class="craft-export-label">${escapeXml(label)}</span><span class="craft-export-tooltip" role="tooltip">${escapeXml(tooltip)}</span>`;
     actionHandlers.set(button, onClick);
     return button;
   }
