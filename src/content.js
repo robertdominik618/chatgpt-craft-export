@@ -516,7 +516,7 @@
 
     sendPdfToNativeBridge(title, html)
       .then((response) => {
-        if (response?.ok && response?.openedInPdfCraft && response?.printDialog) return;
+        if (response?.ok && response?.openedInPdfCraft) return;
         console.warn("[Craft Export] PdfCraft bridge unavailable", response);
         printFallback(title, html);
       })
