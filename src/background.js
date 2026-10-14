@@ -26,9 +26,16 @@ runtimeApi.onMessage.addListener((message, _sender, sendResponse) => {
     ? { action: "wordcraft.open", title: message.title, base64: message.base64 }
     : { action: "pdfcraft.open", title: message.title, html: message.html };
 
-  sendToNative(payload)
-    .then((result) => sendResponse({ ok: true, ...result }))
-    .catch((error) => sendResponse({ ok: false, error: String(error?.message || error) }));
+  const task = sendToNative(payload)
+    .then((result) => ({ ok: true, ...result }))
+    .catch((error) => ({ ok: false, error: String(error?.message || error) }));
 
+  // Firefox WebExtensions use a Promise returned from onMessage for async replies.
+  if (typeof browser !== "undefined") {
+    return task;
+  }
+
+  // Chromium keeps the message channel open by returning true and replying later.
+  task.then(sendResponse);
   return true;
 });
