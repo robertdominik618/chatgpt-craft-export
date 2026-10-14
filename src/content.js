@@ -569,8 +569,9 @@
     const existing = article.querySelector(`.${ACTION_CLASS}[data-craft-export-for="assistant"]`);
     if (existing) {
       const adobe = findAdobePdfAction(message);
-      if (adobe && adobe.nextElementSibling !== existing) {
-        adobe.insertAdjacentElement("afterend", existing);
+      const adobeGroup = adobe?.parentElement;
+      if (adobeGroup && adobeGroup.nextElementSibling !== existing) {
+        adobeGroup.insertAdjacentElement("afterend", existing);
       }
       message.setAttribute(INJECTED_ATTR, "true");
       return;
@@ -604,8 +605,8 @@
 
     // Preferred anchor: place our controls immediately beside the Adobe PDF control.
     const adobe = findAdobePdfAction(message);
-    if (adobe) {
-      adobe.insertAdjacentElement("afterend", actions);
+    if (adobe?.parentElement) {
+      adobe.parentElement.insertAdjacentElement("afterend", actions);
       message.setAttribute(INJECTED_ATTR, "true");
       return;
     }
