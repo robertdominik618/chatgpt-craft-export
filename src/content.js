@@ -424,6 +424,50 @@
     setTimeout(() => URL.revokeObjectURL(url), 30000);
   }
 
+  function blobToBase64(blob) {
+    return blob.arrayBuffer().then((buffer) => {
+      const bytes = new Uint8Array(buffer);
+      let binary = "";
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+      }
+      return btoa(binary);
+    });
+  }
+
+  function sendWordToNativeBridge(title, blob) {
+    return blobToBase64(blob).then((base64) => {
+      const payload = { type: "craft-export-word", title, base64 };
+      if (typeof browser !== "undefined" && browser.runtime?.sendMessage) {
+        return browser.runtime.sendMessage(payload);
+      }
+      return new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage(payload, (response) => {
+          const error = chrome.runtime.lastError;
+          if (error) {
+            reject(new Error(error.message));
+            return;
+          }
+          resolve(response);
+        });
+      });
+    });
+  }
+
+  function openWordCraftOrDownload(message) {
+    const { blob, title } = buildDocxBlob(message);
+    sendWordToNativeBridge(title, blob)
+      .then((response) => {
+        if (response?.ok && response?.openedInWordCraft) return;
+        console.warn("[Craft Export] WordCraft bridge unavailable", response);
+        downloadBlob(blob, `${title}.docx`);
+      })
+      .catch((error) => {
+        console.warn("[Craft Export] WordCraft bridge failed; downloading DOCX", error);
+        downloadBlob(blob, `${title}.docx`);
+      });
+  }
   function printFallback(title, html) {
     const iframe = document.createElement("iframe");
     iframe.className = "craft-export-print-frame";
@@ -747,12 +791,11 @@
 
     const wordButton = makeButton("word", labels.word, labels.wordTooltip, () => {
         try {
-          const { blob, title } = buildDocxBlob(message);
-          downloadBlob(blob, `${title}.docx`);
-        } catch (error) {
-          console.error("[Craft Export] DOCX export failed", error);
-          alert("DOCX export failed. Please refresh ChatGPT and try again.");
-        }
+        openWordCraftOrDownload(message);
+      } catch (error) {
+        console.error("[Craft Export] DOCX export failed", error);
+        alert("DOCX export failed. Please refresh ChatGPT and try again.");
+      }
       });
 
     const pdfButton = makeButton("pdf", labels.pdf, labels.pdfTooltip, () => {
