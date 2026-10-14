@@ -12,7 +12,7 @@
     "message": "Převést do PDF"
   },
   "wordTooltip": {
-    "message": "Stáhne tuto odpověď jako soubor .docx pro WordCraft."
+    "message": "Vytvoří DOCX a otevře ho v aplikaci WordCraft."
   },
   "pdfTooltip": {
     "message": "Vytvoří PDF a otevře ho v aplikaci PdfCraft."

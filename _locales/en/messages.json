@@ -12,7 +12,7 @@
     "message": "Convert to PDF"
   },
   "wordTooltip": {
-    "message": "Downloads this response as a .docx file for WordCraft."
+    "message": "Creates a DOCX and opens it in the WordCraft app."
   },
   "pdfTooltip": {
     "message": "Creates a PDF and opens it in the PdfCraft app."

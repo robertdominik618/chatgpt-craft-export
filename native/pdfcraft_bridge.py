@@ -15,6 +15,7 @@ import traceback
 
 HOST_NAME = "cz.urgentsolution.craftexport.pdfcraft"
 PDFCRAFT = pathlib.Path("/Applications/PdfCraft.app/Contents/MacOS/PdfCraft")
+WORDCRAFT_APP = pathlib.Path("/Applications/WordCraft.app")
 CHROME_CANDIDATES = [
     pathlib.Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
     pathlib.Path("/Applications/Chromium.app/Contents/MacOS/Chromium"),
@@ -55,6 +56,17 @@ def safe_name(value):
     value = re.sub(r'[\\/:*?"<>|\x00-\x1f]', " ", str(value or "ChatGPT export"))
     value = re.sub(r"\s+", " ", value).strip().strip(".")
     return (value[:120] or "ChatGPT export")
+
+def unique_docx_path(title):
+    downloads = pathlib.Path.home() / "Downloads"
+    downloads.mkdir(parents=True, exist_ok=True)
+    stem = safe_name(title)
+    candidate = downloads / f"{stem}.docx"
+    i = 2
+    while candidate.exists():
+        candidate = downloads / f"{stem} ({i}).docx"
+        i += 1
+    return candidate
 
 def unique_pdf_path(title):
     downloads = pathlib.Path.home() / "Downloads"
@@ -144,16 +156,37 @@ def open_in_pdfcraft(pdf_path):
         file_obj.close()
         sock.close()
 
+
+def open_in_wordcraft(title, base64_data):
+    if not WORDCRAFT_APP.exists():
+        raise RuntimeError("WordCraft.app is not installed in /Applications")
+    if not isinstance(base64_data, str) or not base64_data:
+        raise RuntimeError("empty DOCX payload")
+    try:
+        data = base64.b64decode(base64_data, validate=True)
+    except Exception as exc:
+        raise RuntimeError(f"invalid DOCX payload: {exc}") from exc
+    out = unique_docx_path(title)
+    out.write_bytes(data)
+    if out.stat().st_size == 0:
+        raise RuntimeError("DOCX write failed")
+    subprocess.run(["/usr/bin/open", "-a", "WordCraft", str(out)], check=True)
+    return out
+
 def handle(message):
-    if message.get("action") != "pdfcraft.open":
-        raise RuntimeError("unsupported action")
+    action = message.get("action")
     title = safe_name(message.get("title"))
-    html_text = message.get("html")
-    if not isinstance(html_text, str) or not html_text.strip():
-        raise RuntimeError("empty printable document")
-    pdf_path = render_pdf(html_text, title)
-    open_in_pdfcraft(pdf_path)
-    return {"path": str(pdf_path), "openedInPdfCraft": True}
+    if action == "wordcraft.open":
+        docx_path = open_in_wordcraft(title, message.get("base64"))
+        return {"path": str(docx_path), "openedInWordCraft": True}
+    if action == "pdfcraft.open":
+        html_text = message.get("html")
+        if not isinstance(html_text, str) or not html_text.strip():
+            raise RuntimeError("empty printable document")
+        pdf_path = render_pdf(html_text, title)
+        open_in_pdfcraft(pdf_path)
+        return {"path": str(pdf_path), "openedInPdfCraft": True}
+    raise RuntimeError("unsupported action")
 
 def main():
     while True:
