@@ -541,7 +541,8 @@
     button.setAttribute("aria-label", label);
     button.setAttribute("data-craft-kind", kind);
     button.removeAttribute("title");
-    button.innerHTML = `${icon(kind)}<span class="craft-export-label">${escapeXml(label)}</span><span class="craft-export-tooltip" role="tooltip">${escapeXml(tooltip)}</span>`;
+    button.setAttribute("data-craft-tooltip", tooltip);
+    button.innerHTML = `${icon(kind)}<span class="craft-export-label">${escapeXml(label)}</span>`;
     actionHandlers.set(button, onClick);
     return button;
   }
