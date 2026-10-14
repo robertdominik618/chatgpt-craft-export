@@ -17,8 +17,9 @@ The extension adds two actions beside the existing ChatGPT response controls, wi
 - The DOCX is generated locally.
 - The filename is automatically derived from the user prompt associated with that answer.
 - Invalid filename characters are removed and long names are shortened.
-- The file is downloaded directly to the browser's normal download location.
-- WordCraft is **not opened automatically** after the download.
+- With the optional macOS Native Messaging bridge installed, the DOCX is saved locally and opened automatically in **WordCraft.app**.
+- WordCraft is explicitly activated so the exported document becomes visible immediately.
+- If the bridge is unavailable, the extension falls back to a normal DOCX browser download.
 - The exported document preserves common structure such as headings, paragraphs, emphasis, lists, code blocks, blockquotes, tables, links, and Unicode text.
 
 ### PdfCraft — Convert to PDF
@@ -54,6 +55,11 @@ WordCraft's documented workflow reads and writes `.docx` natively. The extension
 | Firefox | Ready | Manifest V3 + Gecko ID; native bridge installer included for macOS |
 | Safari | Xcode wrapper included | Safari Web Extension project is included under `safari-xcode/`; signing is required for normal distribution |
 
+## Complete feature reference
+
+- [English feature reference](docs/FEATURES.en.md)
+- [Český přehled funkcí](docs/FEATURES.cs.md)
+
 ## Installation guides
 
 - [English installation guide — Chrome, Firefox, Safari](docs/INSTALLATION.en.md)
@@ -71,7 +77,7 @@ npm run build
 
 Open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select `dist/chromium`.
 
-On macOS, install the optional PdfCraft desktop bridge with:
+On macOS, install the optional local desktop bridge for **both WordCraft and PdfCraft** with:
 
 ```bash
 ./native/install_macos.sh
@@ -87,7 +93,7 @@ npm run build
 
 Open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on**, and select `dist/firefox/manifest.json`.
 
-On macOS, `./native/install_macos.sh` also installs the Firefox Native Messaging host used for direct PdfCraft opening.
+On macOS, `./native/install_macos.sh` also installs the Firefox Native Messaging host used for direct WordCraft and PdfCraft opening.
 
 ### Safari
 
@@ -97,7 +103,7 @@ Follow [docs/SAFARI.md](docs/SAFARI.md). Safari requires Apple's Safari Web Exte
 
 The browser extension observes rendered assistant responses and adds the two Craft export actions to the ChatGPT response toolbar.
 
-The **DOCX path** builds a minimal standards-based OOXML package locally in the browser.
+The **DOCX path** builds a standards-based OOXML package locally in the browser. With the native bridge installed, the document is written to `Downloads`, opened through the WordCraft bundle identifier, and WordCraft is activated.
 
 The **PDF path** sends the printable representation to a local Native Messaging bridge when available. On macOS, that bridge renders a PDF locally, saves it to the user's computer, and opens the file in the installed PdfCraft application. The bridge communicates only on the local machine and does not use a remote conversion service.
 
@@ -124,7 +130,7 @@ npm test
 npm run build
 ```
 
-The extension runtime remains intentionally small, and the project includes browser builds plus the optional macOS PdfCraft bridge.
+The extension runtime remains intentionally small, and the project includes browser builds plus the optional macOS WordCraft/PdfCraft bridge.
 
 ## Project author
 
