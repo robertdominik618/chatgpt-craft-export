@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.8 - 2026-10-14
+
+- Fixed Firefox async response handling for Native Messaging.
+- Firefox now returns a Promise from `runtime.onMessage`, matching Firefox WebExtension semantics.
+- Chrome keeps its callback + `return true` path unchanged.
+- Rebuilt the Firefox development package with the current WordCraft/PdfCraft native bridge integration.
+
 ## 0.2.7 - 2026-10-14
 
 Current working macOS integration release.
