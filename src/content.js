@@ -799,17 +799,19 @@
     if (existing) {
       const adobe = findAdobePdfAction(message);
       const adobeGroup = adobe?.parentElement;
-      if (
-        adobeGroup
-        && adobeGroup !== existing
-        && !existing.contains(adobeGroup)
-        && !adobeGroup.contains(existing)
-        && adobeGroup.nextElementSibling !== existing
-      ) {
-        adobeGroup.insertAdjacentElement("afterend", existing);
+
+      if (!adobeGroup) {
+        message.setAttribute(INJECTED_ATTR, "true");
+        return;
       }
-      message.setAttribute(INJECTED_ATTR, "true");
-      return;
+
+      if (existing.contains(adobeGroup) || adobeGroup.contains(existing)) {
+        existing.remove();
+      } else {
+        safeInsertAfter(adobeGroup, existing);
+        message.setAttribute(INJECTED_ATTR, "true");
+        return;
+      }
     }
 
     const actions = document.createElement("span");
