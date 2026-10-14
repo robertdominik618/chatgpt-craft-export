@@ -1,60 +1,68 @@
 .craft-export-actions {
   display: inline-flex !important;
-  align-items: center;
-  gap: 2px;
-  margin-inline: 4px 2px;
-  vertical-align: middle;
-  position: relative;
-  z-index: 3;
+  align-items: center !important;
+  gap: 6px !important;
+  margin-inline: 4px 6px !important;
+  vertical-align: middle !important;
+  position: relative !important;
+  z-index: 3 !important;
   visibility: visible !important;
   opacity: 1 !important;
+  width: auto !important;
+  min-width: max-content !important;
+  flex: 0 0 auto !important;
 }
 
 .craft-export-button {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  opacity: 0.72;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 32px;
-  padding: 4px 8px;
-  border-radius: 8px;
-  font: inherit;
-  font-size: 13px;
-  line-height: 1.2;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background-color 120ms ease, opacity 120ms ease;
+  appearance: none !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: inherit !important;
+  opacity: 0.72 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+  width: auto !important;
+  min-width: max-content !important;
+  max-width: none !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 4px 9px !important;
+  border-radius: 8px !important;
+  font: inherit !important;
+  font-size: 14px !important;
+  line-height: 20px !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  flex: 0 0 auto !important;
+  transition: background-color 120ms ease, opacity 120ms ease !important;
 }
 
 .craft-export-button:hover {
-  background: color-mix(in srgb, currentColor 8%, transparent);
-  opacity: 1;
+  background: color-mix(in srgb, currentColor 8%, transparent) !important;
+  opacity: 1 !important;
 }
 
 .craft-export-button:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 2px;
-  opacity: 1;
+  outline: 2px solid currentColor !important;
+  outline-offset: 2px !important;
+  opacity: 1 !important;
 }
 
 .craft-export-button svg {
-  width: 18px;
-  height: 18px;
-  flex: 0 0 18px;
+  display: block !important;
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  flex: 0 0 18px !important;
 }
 
-@media (max-width: 760px) {
-  .craft-export-button span {
-    display: none;
-  }
-
-  .craft-export-button {
-    width: 32px;
-    justify-content: center;
-    padding: 4px;
-  }
+.craft-export-button > span {
+  display: inline !important;
+  width: auto !important;
+  min-width: max-content !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
 }
