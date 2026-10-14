@@ -10,6 +10,14 @@
 
   const browserApi = typeof browser !== "undefined" ? browser : chrome;
 
+  function extensionContextAlive() {
+    try {
+      return Boolean(browserApi?.runtime?.id);
+    } catch {
+      return false;
+    }
+  }
+
   function msg(key, fallback) {
     try {
       return browserApi?.i18n?.getMessage?.(key) || fallback;
@@ -437,6 +445,7 @@
   }
 
   function sendWordToNativeBridge(title, blob) {
+    if (!extensionContextAlive()) return Promise.reject(new Error("Extension context invalidated; reload ChatGPT."));
     return blobToBase64(blob).then((base64) => {
       const payload = { type: "craft-export-word", title, base64 };
       if (typeof browser !== "undefined" && browser.runtime?.sendMessage) {
@@ -503,6 +512,7 @@
   }
 
   function sendPdfToNativeBridge(title, html) {
+    if (!extensionContextAlive()) return Promise.reject(new Error("Extension context invalidated; reload ChatGPT."));
     const payload = { type: "craft-export-pdf", title, html };
 
     if (typeof browser !== "undefined" && browser.runtime?.sendMessage) {
@@ -763,6 +773,22 @@
     return null;
   }
 
+  function safeInsertAfter(anchor, node) {
+    if (!(anchor instanceof Element) || !(node instanceof Element)) return false;
+    const parent = anchor.parentNode;
+    if (!(parent instanceof Node)) return false;
+    if (node === anchor || node === parent || node.contains(parent) || anchor.contains(node)) return false;
+
+    try {
+      if (node.parentNode !== parent || node.previousSibling !== anchor) {
+        parent.insertBefore(node, anchor.nextSibling);
+      }
+      return true;
+    } catch (error) {
+      console.warn("[Craft Export] toolbar placement skipped", error);
+      return false;
+    }
+  }
   function injectForMessage(message) {
     if (!(message instanceof Element)) return;
 
@@ -822,13 +848,9 @@
 
     // Preferred anchor: place our controls immediately beside the Adobe PDF control.
     const adobe = findAdobePdfAction(message);
-    if (adobe?.parentElement) {
-      const adobeGroup = adobe.parentElement;
-      if (adobeGroup !== actions && !actions.contains(adobeGroup) && !adobeGroup.contains(actions)) {
-        adobeGroup.insertAdjacentElement("afterend", actions);
-        message.setAttribute(INJECTED_ATTR, "true");
-        return;
-      }
+    if (adobe?.parentElement && safeInsertAfter(adobe.parentElement, actions)) {
+      message.setAttribute(INJECTED_ATTR, "true");
+      return;
     }
 
     // Fallback: keep the controls inside the native ChatGPT response-action row.
@@ -840,8 +862,15 @@
     }
 
     // Last resort: keep controls visible directly below the response.
-    message.insertAdjacentElement("afterend", actions);
-    message.setAttribute(INJECTED_ATTR, "true");
+    const fallbackParent = message.parentNode;
+    if (fallbackParent && fallbackParent !== actions && !actions.contains(fallbackParent)) {
+      try {
+        fallbackParent.insertBefore(actions, message.nextSibling);
+        message.setAttribute(INJECTED_ATTR, "true");
+      } catch (error) {
+        console.warn("[Craft Export] fallback placement skipped", error);
+      }
+    }
   }
 
   function scan() {
