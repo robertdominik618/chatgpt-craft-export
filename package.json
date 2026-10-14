@@ -9,7 +9,7 @@
     "check": "node scripts/check.mjs",
     "test": "npm run check"
   },
-  "license": "MIT OR Apache-2.0",
+  "license": "MIT",
   "engines": {
     "node": ">=20"
   }
