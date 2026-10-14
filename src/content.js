@@ -458,10 +458,11 @@
   }
 
   function icon(kind) {
-    if (kind === "word") {
-      return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.75h10.5L19 7.25V20.25H5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M15.5 3.75v3.5H19M7.8 10.2l1.45 5.3 1.55-4.15 1.55 4.15 1.45-5.3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-    }
-    return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.75h10.5L19 7.25V20.25H5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M15.5 3.75v3.5H19M8 15.6v-5h2a1.5 1.5 0 0 1 0 3H8m5-3h1.5a2 2 0 0 1 0 4H13z" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    const src = kind === "word"
+      ? browserApi.runtime.getURL("assets/apps/wordcraft-32.png")
+      : browserApi.runtime.getURL("assets/apps/pdfcraft-32.png");
+    const alt = kind === "word" ? "WordCraft" : "PdfCraft";
+    return `<img class="craft-export-app-icon" src="${src}" alt="${alt}" width="20" height="20">`;
   }
 
   function makeButton(kind, label, tooltip, onClick) {
@@ -470,7 +471,7 @@
     button.className = BUTTON_CLASS;
     button.setAttribute("aria-label", label);
     button.title = tooltip;
-    button.innerHTML = `${icon(kind)}<span>${escapeXml(label)}</span>`;
+    button.innerHTML = icon(kind);
     button.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -570,7 +571,7 @@
     // Preferred anchor: place our controls immediately beside the Adobe PDF control.
     const adobe = findAdobePdfAction(message);
     if (adobe) {
-      adobe.insertAdjacentElement("beforebegin", actions);
+      adobe.insertAdjacentElement("afterend", actions);
       message.setAttribute(INJECTED_ATTR, "true");
       return;
     }
