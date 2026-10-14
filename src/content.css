@@ -58,6 +58,12 @@
 
 .craft-export-label {
   display: inline-block;
+  pointer-events: none;
+}
+
+.craft-export-button,
+.craft-export-button * {
+  -webkit-user-drag: none;
 }
 
 .craft-export-print-frame {
