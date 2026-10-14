@@ -84,44 +84,88 @@
   background: var(--main-surface-secondary, rgba(0, 0, 0, 0.08)) !important;
 }
 
-.craft-export-tooltip {
-  position: absolute;
-  left: 50%;
-  top: calc(100% + 10px);
-  transform: translateX(-50%) translateY(-2px);
-  z-index: 2147483647;
-  width: max-content;
-  max-width: 260px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: rgba(70, 70, 70, 0.92);
-  color: #fff;
-  font-size: 12px;
-  line-height: 1.35;
-  font-weight: 400;
-  white-space: normal;
-  text-align: left;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-  pointer-events: none;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease;
+
+.turn-action-controls .craft-export-actions {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  flex: 0 0 auto !important;
+  overflow: visible !important;
 }
 
-.craft-export-tooltip::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: 100%;
-  transform: translateX(-50%);
-  border-width: 0 7px 7px;
-  border-style: solid;
-  border-color: transparent transparent rgba(70, 70, 70, 0.92);
+.turn-action-controls button.craft-export-button {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: auto !important;
+  min-width: max-content !important;
+  max-width: none !important;
+  flex: 0 0 auto !important;
+  overflow: visible !important;
+  white-space: nowrap !important;
 }
 
-.craft-export-button:hover .craft-export-tooltip,
-.craft-export-button:focus-visible .craft-export-tooltip {
-  opacity: 1;
-  visibility: visible;
-  transform: translateX(-50%) translateY(0);
+.turn-action-controls button.craft-export-button:hover,
+.turn-action-controls button.craft-export-button:focus-visible {
+  background: var(--main-surface-secondary, rgba(0, 0, 0, 0.08)) !important;
+}
+
+.turn-action-controls button.craft-export-button::after {
+  content: attr(data-craft-tooltip) !important;
+  position: absolute !important;
+  left: 50% !important;
+  top: calc(100% + 12px) !important;
+  transform: translateX(-50%) translateY(-2px) !important;
+  z-index: 2147483647 !important;
+  display: block !important;
+  width: max-content !important;
+  min-width: 0 !important;
+  max-width: 280px !important;
+  padding: 8px 10px !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: rgba(70, 70, 70, 0.94) !important;
+  color: #fff !important;
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+  font-weight: 400 !important;
+  text-align: left !important;
+  white-space: normal !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18) !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease !important;
+}
+
+.turn-action-controls button.craft-export-button::before {
+  content: "" !important;
+  position: absolute !important;
+  left: 50% !important;
+  top: calc(100% + 5px) !important;
+  transform: translateX(-50%) !important;
+  z-index: 2147483647 !important;
+  border-width: 0 7px 7px !important;
+  border-style: solid !important;
+  border-color: transparent transparent rgba(70, 70, 70, 0.94) !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+.turn-action-controls button.craft-export-button:hover::after,
+.turn-action-controls button.craft-export-button:hover::before,
+.turn-action-controls button.craft-export-button:focus-visible::after,
+.turn-action-controls button.craft-export-button:focus-visible::before {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.turn-action-controls button.craft-export-button:hover::after,
+.turn-action-controls button.craft-export-button:focus-visible::after {
+  transform: translateX(-50%) translateY(0) !important;
 }
