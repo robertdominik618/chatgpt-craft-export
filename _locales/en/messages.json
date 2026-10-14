@@ -6,15 +6,15 @@
     "message": "Adds local WordCraft (DOCX) and PdfCraft (PDF print) export actions to ChatGPT responses."
   },
   "wordButton": {
-    "message": "Convert to WordCraft (.docx)"
+    "message": "Convert to DOC"
   },
   "pdfButton": {
-    "message": "Convert to PdfCraft (.pdf)"
+    "message": "Convert to PDF"
   },
   "wordTooltip": {
-    "message": "Export this ChatGPT response as a standards-based DOCX file for WordCraft."
+    "message": "Convert this response to DOCX for WordCraft."
   },
   "pdfTooltip": {
-    "message": "Open a clean print view for saving this ChatGPT response as PDF and opening it in PdfCraft."
+    "message": "Convert this response to PDF for PdfCraft."
   }
 }
