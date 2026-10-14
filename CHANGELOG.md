@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.9 - 2026-10-14
+
+- Fixed `HierarchyRequestError` caused by the Adobe-action detector accidentally matching the Craft PdfCraft button itself.
+- Adobe detection now explicitly prefers `.acrobat-chatgpt-response-convert-btn` and excludes elements inside `.craft-export-actions`.
+- Added ancestor/descendant guards before toolbar re-parenting so the extension can never insert a parent into its own descendant tree.
+- Rebuilt both Chromium and Firefox development packages.
+
 ## 0.2.8 - 2026-10-14
 
 - Fixed Firefox async response handling for Native Messaging.
