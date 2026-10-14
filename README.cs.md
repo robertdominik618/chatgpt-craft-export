@@ -11,6 +11,11 @@ Projekt neposílá obsah chatu na žádný server, nepoužívá analytiku ani ex
 
 WordCraft dnes dokumentuje nativní čtení a zápis `.docx`. Proto doplněk generuje skutečný standardní DOCX. Vytvářet HTML soubor pouze přejmenovaný na `.doc` by bylo méně spolehlivé a pro open-source projekt horší technické řešení.
 
+## Instalační manuály
+
+- [Český instalační manuál — Chrome, Firefox, Safari](docs/INSTALLATION.cs.md)
+- [English installation guide — Chrome, Firefox, Safari](docs/INSTALLATION.en.md)
+
 ## Instalace pro vývoj
 
 ```bash
