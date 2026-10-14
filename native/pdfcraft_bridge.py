@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import html
+import base64
 import json
 import os
 import pathlib
