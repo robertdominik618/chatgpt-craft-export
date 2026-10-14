@@ -503,19 +503,21 @@
 
   function injectForMessage(message) {
     if (!(message instanceof Element)) return;
-    if (message.getAttribute(INJECTED_ATTR) === "true") return;
 
-    const actionBar = findActionBar(message);
-    const host = actionBar || message.parentElement;
-    if (!host) return;
+    const parent = message.parentElement;
+    if (!parent) return;
 
-    if (host.querySelector(`.${ACTION_CLASS}`)) {
+    const existing = parent.querySelector(`:scope > .${ACTION_CLASS}[data-craft-export-for="assistant"]`);
+    if (existing) {
       message.setAttribute(INJECTED_ATTR, "true");
       return;
     }
 
     const actions = document.createElement("div");
     actions.className = ACTION_CLASS;
+    actions.setAttribute("data-craft-export-for", "assistant");
+    actions.setAttribute("role", "group");
+    actions.setAttribute("aria-label", "Craft export actions");
 
     actions.append(
       makeButton("word", labels.word, labels.wordTooltip, () => {
@@ -537,7 +539,9 @@
       })
     );
 
-    host.appendChild(actions);
+    // Prefer a deterministic, visible position directly below the assistant
+    // message instead of attaching to ChatGPT's frequently changing action bar.
+    message.insertAdjacentElement("afterend", actions);
     message.setAttribute(INJECTED_ATTR, "true");
   }
 
