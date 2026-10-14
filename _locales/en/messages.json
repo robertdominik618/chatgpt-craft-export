@@ -1,0 +1,20 @@
+{
+  "extensionName": {
+    "message": "Craft Export for ChatGPT"
+  },
+  "extensionDescription": {
+    "message": "Adds local WordCraft (DOCX) and PdfCraft (PDF print) export actions to ChatGPT responses."
+  },
+  "wordButton": {
+    "message": "Convert to WordCraft (.docx)"
+  },
+  "pdfButton": {
+    "message": "Convert to PdfCraft (.pdf)"
+  },
+  "wordTooltip": {
+    "message": "Export this ChatGPT response as a standards-based DOCX file for WordCraft."
+  },
+  "pdfTooltip": {
+    "message": "Open a clean print view for saving this ChatGPT response as PDF and opening it in PdfCraft."
+  }
+}
