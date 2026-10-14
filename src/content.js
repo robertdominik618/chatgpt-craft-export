@@ -539,28 +539,58 @@
     button.type = "button";
     button.className = BUTTON_CLASS;
     button.setAttribute("aria-label", label);
+    button.setAttribute("data-craft-kind", kind);
     button.title = tooltip;
     button.innerHTML = `${icon(kind)}<span class="craft-export-label">${escapeXml(label)}</span>`;
     actionHandlers.set(button, onClick);
-    button.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      onClick();
-    });
     return button;
   }
 
-  // ChatGPT installs interaction handlers around the response toolbar. Intercept
-  // Craft button clicks at the window capture phase so those handlers cannot swallow
-  // the user click before it reaches our button.
-  window.addEventListener("click", (event) => {
-    const target = event.target instanceof Element ? event.target.closest(`.${BUTTON_CLASS}`) : null;
-    if (!(target instanceof HTMLButtonElement)) return;
-    const handler = actionHandlers.get(target);
+  function runCraftAction(button, event) {
+    const handler = actionHandlers.get(button);
     if (!handler) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    handler();
+
+    const now = Date.now();
+    const lastRun = Number(button.dataset.craftLastRun || 0);
+    if (now - lastRun < 1200) return;
+    button.dataset.craftLastRun = String(now);
+
+    event?.preventDefault();
+    event?.stopImmediatePropagation();
+    button.classList.add("craft-export-button--active");
+    setTimeout(() => button.classList.remove("craft-export-button--active"), 350);
+
+    try {
+      handler();
+    } catch (error) {
+      console.error("[Craft Export] action failed", error);
+    }
+  }
+
+  function craftButtonFromEvent(event) {
+    const node = event.target instanceof Element ? event.target.closest(`.${BUTTON_CLASS}`) : null;
+    return node instanceof HTMLButtonElement ? node : null;
+  }
+
+  // Run on pointerdown, before ChatGPT/React can replace the toolbar node between
+  // pointerdown and click. A click fallback keeps keyboard activation accessible.
+  window.addEventListener("pointerdown", (event) => {
+    const button = craftButtonFromEvent(event);
+    if (!button) return;
+    runCraftAction(button, event);
+  }, true);
+
+  window.addEventListener("click", (event) => {
+    const button = craftButtonFromEvent(event);
+    if (!button) return;
+    runCraftAction(button, event);
+  }, true);
+
+  window.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const button = craftButtonFromEvent(event);
+    if (!button) return;
+    runCraftAction(button, event);
   }, true);
 
   function scoreActionBarCandidate(element) {
