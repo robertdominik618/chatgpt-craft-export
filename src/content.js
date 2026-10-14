@@ -422,9 +422,7 @@
     setTimeout(() => URL.revokeObjectURL(url), 30000);
   }
 
-  function openPdfPrintView(message) {
-    const clean = cleanClone(message);
-    const title = titleFromMessage(message);
+  function printFallback(title, html) {
     const iframe = document.createElement("iframe");
     iframe.className = "craft-export-print-frame";
     iframe.setAttribute("aria-hidden", "true");
@@ -436,6 +434,54 @@
     iframe.style.border = "0";
     iframe.style.opacity = "0";
     iframe.style.pointerEvents = "none";
+
+    iframe.addEventListener("load", () => {
+      try {
+        const win = iframe.contentWindow;
+        if (!win) throw new Error("Print frame unavailable");
+        win.document.title = title;
+        setTimeout(() => {
+          win.focus();
+          win.print();
+          setTimeout(() => iframe.remove(), 1500);
+        }, 150);
+      } catch (error) {
+        iframe.remove();
+        console.error("[Craft Export] PDF fallback print failed", error);
+        alert("PDF export failed. Please try again.");
+      }
+    }, { once: true });
+
+    document.body.appendChild(iframe);
+    iframe.srcdoc = html;
+  }
+
+  function sendPdfToNativeBridge(title, html) {
+    const payload = { type: "craft-export-pdf", title, html };
+
+    if (typeof browser !== "undefined" && browser.runtime?.sendMessage) {
+      return browser.runtime.sendMessage(payload);
+    }
+
+    return new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage(payload, (response) => {
+        const error = chrome.runtime.lastError;
+        if (error) {
+          reject(new Error(error.message));
+          return;
+        }
+        resolve(response);
+      });
+    });
+  }
+
+  function openPdfPrintView(message) {
+    const clean = cleanClone(message);
+    clean.querySelectorAll("img").forEach((img) => {
+      img.removeAttribute("srcset");
+      img.removeAttribute("loading");
+    });
+    const title = titleFromMessage(message);
 
     const style = `
       :root { color-scheme: light; }
@@ -455,6 +501,7 @@
       blockquote { margin-left: 0; padding-left: 16px; border-left: 3px solid #d1d5db; color: #4b5563; }
       table { width: 100%; border-collapse: collapse; }
       th,td { border: 1px solid #d1d5db; padding: 8px 10px; vertical-align: top; }
+      img { max-width: 100%; height: auto; }
       a { color: inherit; text-decoration: underline; }
       .craft-print-meta { margin-bottom: 28px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb; color: #6b7280; font-size: 12px; }
       @page { size: A4; margin: 18mm; }
@@ -466,25 +513,16 @@
 
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeXml(title)}</title><style>${style}</style></head><body><main><div class="craft-print-meta">Exported from ChatGPT with Craft Export for ChatGPT</div>${clean.innerHTML}</main></body></html>`;
 
-    iframe.addEventListener("load", () => {
-      try {
-        const win = iframe.contentWindow;
-        if (!win) throw new Error("Print frame unavailable");
-        win.document.title = title;
-        setTimeout(() => {
-          win.focus();
-          win.print();
-          setTimeout(() => iframe.remove(), 1500);
-        }, 150);
-      } catch (error) {
-        iframe.remove();
-        console.error("[Craft Export] PDF print failed", error);
-        alert("PDF export failed. Please try again.");
-      }
-    }, { once: true });
-
-    document.body.appendChild(iframe);
-    iframe.srcdoc = html;
+    sendPdfToNativeBridge(title, html)
+      .then((response) => {
+        if (response?.ok && response?.openedInPdfCraft && response?.printDialog) return;
+        console.warn("[Craft Export] PdfCraft bridge unavailable", response);
+        printFallback(title, html);
+      })
+      .catch((error) => {
+        console.warn("[Craft Export] PdfCraft bridge failed; using browser print", error);
+        printFallback(title, html);
+      });
   }
 
   function icon(kind) {
