@@ -613,6 +613,8 @@
     const rect = button.getBoundingClientRect();
     tooltip.style.left = `${rect.left + rect.width / 2}px`;
     tooltip.style.top = `${rect.bottom + 10}px`;
+    tooltip.style.width = `${Math.round(rect.width)}px`;
+    tooltip.style.maxWidth = `${Math.round(rect.width)}px`;
     tooltip.classList.add("craft-export-hover-tooltip--visible");
 
     requestAnimationFrame(() => {
@@ -630,18 +632,26 @@
     hoverTooltip?.classList.remove("craft-export-hover-tooltip--visible");
   }
 
-  window.addEventListener("pointerover", (event) => {
+  let hoveredCraftButton = null;
+
+  window.addEventListener("pointermove", (event) => {
     const button = craftButtonFromEvent(event);
-    if (!button) return;
-    showCraftHover(button);
+    if (button === hoveredCraftButton) return;
+
+    if (hoveredCraftButton) hideCraftHover(hoveredCraftButton);
+    hoveredCraftButton = button;
+
+    if (button) {
+      showCraftHover(button);
+    } else {
+      hoverTooltip?.classList.remove("craft-export-hover-tooltip--visible");
+    }
   }, true);
 
-  window.addEventListener("pointerout", (event) => {
-    const button = craftButtonFromEvent(event);
-    if (!button) return;
-    const next = event.relatedTarget;
-    if (next instanceof Node && button.contains(next)) return;
-    hideCraftHover(button);
+  window.addEventListener("pointerleave", () => {
+    if (hoveredCraftButton) hideCraftHover(hoveredCraftButton);
+    hoveredCraftButton = null;
+    hoverTooltip?.classList.remove("craft-export-hover-tooltip--visible");
   }, true);
 
   window.addEventListener("focusin", (event) => {
@@ -727,13 +737,15 @@
     actions.setAttribute("role", "group");
     actions.setAttribute("aria-label", "Craft export actions");
 
-    const divider = document.createElement("span");
-    divider.className = "craft-export-divider";
-    divider.setAttribute("aria-hidden", "true");
-    actions.appendChild(divider);
+    const wordDivider = document.createElement("span");
+    wordDivider.className = "craft-export-divider";
+    wordDivider.setAttribute("aria-hidden", "true");
 
-    actions.append(
-      makeButton("word", labels.word, labels.wordTooltip, () => {
+    const pdfDivider = document.createElement("span");
+    pdfDivider.className = "craft-export-divider";
+    pdfDivider.setAttribute("aria-hidden", "true");
+
+    const wordButton = makeButton("word", labels.word, labels.wordTooltip, () => {
         try {
           const { blob, title } = buildDocxBlob(message);
           downloadBlob(blob, `${title}.docx`);
@@ -741,16 +753,18 @@
           console.error("[Craft Export] DOCX export failed", error);
           alert("DOCX export failed. Please refresh ChatGPT and try again.");
         }
-      }),
-      makeButton("pdf", labels.pdf, labels.pdfTooltip, () => {
-        try {
-          openPdfPrintView(message);
-        } catch (error) {
-          console.error("[Craft Export] PDF print view failed", error);
-          alert("PDF export failed. Please refresh ChatGPT and try again.");
-        }
-      })
-    );
+      });
+
+    const pdfButton = makeButton("pdf", labels.pdf, labels.pdfTooltip, () => {
+      try {
+        openPdfPrintView(message);
+      } catch (error) {
+        console.error("[Craft Export] PDF print view failed", error);
+        alert("PDF export failed. Please refresh ChatGPT and try again.");
+      }
+    });
+
+    actions.append(wordDivider, wordButton, pdfDivider, pdfButton);
 
     // Preferred anchor: place our controls immediately beside the Adobe PDF control.
     const adobe = findAdobePdfAction(message);
