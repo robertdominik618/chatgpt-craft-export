@@ -803,21 +803,10 @@
     const article = message.closest("[data-talvt-turn-state]") || message.closest("article") || message.parentElement?.parentElement || message.parentElement;
     if (!article) return null;
 
-    const buttons = Array.from(article.querySelectorAll("button,[role='button']"));
-    const knownActionLabels = ["Copy", "Kopírovat", "Read aloud", "Přečíst nahlas", "Regenerate", "Znovu vygenerovat", "More", "Více"];
-
-    for (const button of buttons) {
-      const label = [button.getAttribute("aria-label"), button.getAttribute("title"), button.textContent]
-        .filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
-      if (!knownActionLabels.some((needle) => label.includes(needle))) continue;
-
-      let node = button.parentElement;
-      for (let depth = 0; node && depth < 4; depth += 1, node = node.parentElement) {
-        const count = node.querySelectorAll("button,[role='button']").length;
-        if (count >= 3 && node.getBoundingClientRect().height < 72) return node;
-      }
-    }
-    return null;
+    // Only use the real ChatGPT response action toolbar. Intermediate Work/agent
+    // status cards, progress messages and tool-state blocks intentionally have no
+    // turn-action-controls and must never receive Craft export buttons.
+    return article.querySelector(".turn-action-controls");
   }
 
   function safeInsertAfter(anchor, node) {
@@ -842,23 +831,27 @@
     const article = message.closest("[data-talvt-turn-state]") || message.closest("article") || message.parentElement?.parentElement || message.parentElement;
     if (!article) return;
 
+    const nativeRow = findNativeActionRow(message);
     const existing = article.querySelector(`.${ACTION_CLASS}[data-craft-export-for="assistant"]`);
-    if (existing) {
+
+    // If there is no genuine ChatGPT response toolbar, this is an intermediate
+    // status/progress/tool surface rather than a final exportable response.
+    if (!nativeRow) {
+      existing?.remove();
+      message.removeAttribute(INJECTED_ATTR);
+      return;
+    }
+
+    if (existing && !nativeRow.contains(existing)) {
+      existing.remove();
+    } else if (existing) {
       const adobe = findAdobePdfAction(message);
       const adobeGroup = adobe?.parentElement;
-
-      if (!adobeGroup) {
-        message.setAttribute(INJECTED_ATTR, "true");
-        return;
-      }
-
-      if (existing.contains(adobeGroup) || adobeGroup.contains(existing)) {
-        existing.remove();
-      } else {
+      if (adobeGroup && nativeRow.contains(adobeGroup)) {
         safeInsertAfter(adobeGroup, existing);
-        message.setAttribute(INJECTED_ATTR, "true");
-        return;
       }
+      message.setAttribute(INJECTED_ATTR, "true");
+      return;
     }
 
     const actions = document.createElement("span");
@@ -876,54 +869,40 @@
     pdfDivider.setAttribute("aria-hidden", "true");
 
     const wordButton = makeButton("word", labels.word, labels.wordTooltip, () => {
-        try {
+      try {
         openWordCraftOrDownload(message);
       } catch (error) {
         console.error("[Craft Export] DOCX export failed", error);
         alert("DOCX export failed. Please refresh ChatGPT and try again.");
       }
-      });
+    });
 
     const pdfButton = makeButton("pdf", labels.pdf, labels.pdfTooltip, () => {
       try {
         openPdfPrintView(message);
       } catch (error) {
-        console.error("[Craft Export] PDF print view failed", error);
+        console.error("[Craft Export] PDF export failed", error);
         alert("PDF export failed. Please refresh ChatGPT and try again.");
       }
     });
 
     actions.append(wordDivider, wordButton, pdfDivider, pdfButton);
 
-    // Preferred anchor: place our controls immediately beside the Adobe PDF control.
     const adobe = findAdobePdfAction(message);
-    if (adobe?.parentElement && safeInsertAfter(adobe.parentElement, actions)) {
+    if (adobe?.parentElement && nativeRow.contains(adobe.parentElement) && safeInsertAfter(adobe.parentElement, actions)) {
       message.setAttribute(INJECTED_ATTR, "true");
       return;
     }
 
-    // Fallback: keep the controls inside the native ChatGPT response-action row.
-    const nativeRow = findNativeActionRow(message);
-    if (nativeRow) {
-      nativeRow.appendChild(actions);
-      message.setAttribute(INJECTED_ATTR, "true");
-      return;
-    }
-
-    // Last resort: keep controls visible directly below the response.
-    const fallbackParent = message.parentNode;
-    if (fallbackParent && fallbackParent !== actions && !actions.contains(fallbackParent)) {
-      try {
-        fallbackParent.insertBefore(actions, message.nextSibling);
-        message.setAttribute(INJECTED_ATTR, "true");
-      } catch (error) {
-        console.warn("[Craft Export] fallback placement skipped", error);
-      }
-    }
+    nativeRow.appendChild(actions);
+    message.setAttribute(INJECTED_ATTR, "true");
   }
 
   function scan() {
     if (!isActiveInstance()) return;
+    document.querySelectorAll(`.${ACTION_CLASS}`).forEach((node) => {
+      if (!node.closest(".turn-action-controls")) node.remove();
+    });
     document.querySelectorAll(ASSISTANT_SELECTOR).forEach(injectForMessage);
   }
 
