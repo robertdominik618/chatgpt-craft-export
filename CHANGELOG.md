@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.5 - 2026-10-15
+
+- Fixed missing Craft buttons after the contextual-placement change.
+- The previous logic selected the first `.turn-action-controls` in a complete turn, which is often the **user-message toolbar** and is normally hidden at opacity 0.
+- Toolbar discovery now walks outward from the assistant message and selects the nearest response action row owned by that assistant response.
+- Misplaced controls in the user toolbar are removed and recreated in the assistant toolbar.
+- Intermediate Work/agent progress surfaces remain excluded.
+
 ## 0.3.4 - 2026-10-15
 
 - Craft export controls are now rendered **only inside ChatGPT's real response action toolbar** (`.turn-action-controls`).
