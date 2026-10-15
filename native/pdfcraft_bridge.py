@@ -123,39 +123,19 @@ def open_in_pdfcraft(pdf_path):
     if not PDFCRAFT.exists():
         raise RuntimeError("PdfCraft.app is not installed in /Applications")
 
-    with tempfile.TemporaryDirectory(prefix="craft-export-pdfcraft-") as td:
-        control = pathlib.Path(td) / "control.json"
-        subprocess.Popen(
-            [str(PDFCRAFT), "--new-window", "--control", str(control), str(pdf_path)],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
-        )
+    # Use macOS LaunchServices instead of spawning the PdfCraft executable with
+    # --new-window. LaunchServices reuses the existing application instance and
+    # delivers the PDF through the normal Open Documents event, so repeated
+    # exports do not create duplicate Dock icons/processes.
+    subprocess.run(["/usr/bin/open", "-b", "ai.storyteller.pdfcraft", str(pdf_path)], check=True)
+    subprocess.run(["/usr/bin/open", "-b", "ai.storyteller.pdfcraft"], check=True)
+    subprocess.run(
+        ["/usr/bin/osascript", "-e", 'tell application id "ai.storyteller.pdfcraft" to activate'],
+        check=False,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
 
-        deadline = time.time() + 12
-        while time.time() < deadline and not control.exists():
-            time.sleep(0.1)
-        if not control.exists():
-            raise RuntimeError("PdfCraft did not create its control channel")
-
-        endpoint = json.loads(control.read_text(encoding="utf-8"))
-        sock = socket.create_connection(("127.0.0.1", int(endpoint["port"])), timeout=5)
-        file_obj = sock.makefile("rwb", buffering=0)
-        rpc(file_obj, 1, "auth", {"token": endpoint["token"]})
-
-        opened = False
-        for i in range(2, 42):
-            state = rpc(file_obj, i, "ui.state", {})
-            docs = state.get("documents") or []
-            if any(pathlib.Path(d.get("path", "")) == pdf_path for d in docs if d.get("path")):
-                opened = True
-                break
-            time.sleep(0.15)
-        if not opened:
-            raise RuntimeError("PdfCraft started but the generated PDF did not become active")
-
-        file_obj.close()
-        sock.close()
 
 
 def open_in_wordcraft(title, base64_data):
