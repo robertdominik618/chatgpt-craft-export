@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.6 - 2026-10-15
+
+- Fixed duplicate PdfCraft application instances on macOS.
+- The native bridge no longer launches the PdfCraft executable with `--new-window` for every export.
+- PdfCraft is now opened through macOS LaunchServices using bundle identifier `ai.storyteller.pdfcraft`, which reuses the existing running application instance.
+- Repeated PDF exports open additional documents in the same PdfCraft application instead of creating extra Dock icons/processes.
+- Verified locally: process count remained 1 after two consecutive opens.
+
 ## 0.3.5 - 2026-10-15
 
 - Fixed missing Craft buttons after the contextual-placement change.
