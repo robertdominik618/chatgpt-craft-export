@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.4 - 2026-10-15
+
+- Craft export controls are now rendered **only inside ChatGPT's real response action toolbar** (`.turn-action-controls`).
+- Intermediate Work/agent status cards, progress updates, tool-state blocks, and other non-final surfaces no longer receive WordCraft/PdfCraft buttons.
+- Any misplaced controls left by older versions are automatically removed during rescans.
+- Removed the old fallback that placed export buttons directly below arbitrary assistant content.
+- Chromium and Firefox builds rebuilt with the stricter placement rule.
+
 ## 0.3.3 - 2026-10-14
 
 - Added automatic reinjection into already-open ChatGPT tabs after extension reload/start.
