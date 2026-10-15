@@ -800,13 +800,18 @@
   }
 
   function findNativeActionRow(message) {
-    const article = message.closest("[data-talvt-turn-state]") || message.closest("article") || message.parentElement?.parentElement || message.parentElement;
-    if (!article) return null;
+    if (!(message instanceof Element)) return null;
 
-    // Only use the real ChatGPT response action toolbar. Intermediate Work/agent
-    // status cards, progress messages and tool-state blocks intentionally have no
-    // turn-action-controls and must never receive Craft export buttons.
-    return article.querySelector(".turn-action-controls");
+    // Walk outward from the assistant message and stop at the first container
+    // that owns a response action row. This selects the assistant toolbar, not
+    // the user-message toolbar that may exist higher in the same turn.
+    let node = message.parentElement;
+    for (let depth = 0; node && depth < 10; depth += 1, node = node.parentElement) {
+      const rows = Array.from(node.querySelectorAll(":scope > .turn-action-controls, :scope > * > .turn-action-controls"));
+      if (rows.length === 1) return rows[0];
+    }
+
+    return null;
   }
 
   function safeInsertAfter(anchor, node) {
